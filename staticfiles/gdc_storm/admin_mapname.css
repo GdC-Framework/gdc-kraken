@@ -1,0 +1,6 @@
+.model-mapname tr { transition: background 0.2s; }
+.model-mapname tr.missing-display-name { background: #ff4444 !important; }
+.missing-display-name th, .missing-display-name td {
+    background: #ff4444 !important;
+    color: #fff !important;
+}

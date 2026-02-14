@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# SQLite database files
+*.sqlite3
+*.db
+*.db3
+*.sql
+
+# pbo files
+*.pbo
+
+# Virtual environments
+venv*/
+
+# VSCode
+.vscode/
+
+# MacOS
+.DS_Store
+
+# Backup files
+*~
+*.bak
+
+# Missions files
+missions/
+
+# Config file
+config*.json
+
+# Not ready files
+README.md

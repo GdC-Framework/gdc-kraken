@@ -1,0 +1,39 @@
+{% extends 'gdc_storm/base.html' %}
+{% block title %}Sessions Orphelines - GDC Storm{% endblock %}
+{% block content %}
+<div class="missions-container" style="max-width:1200px;margin:40px auto 0 auto;padding:0 32px 32px 32px;border-radius:18px;background:#fff;box-shadow:0 2px 16px #0002;">
+    <div class="missions-title" style="font-size:2.1em;font-weight:700;margin-top:12px;">Sessions Orphelines</div>
+    {% if sessions %}
+    <table style="width:100%;table-layout:auto;">
+        <thead>
+            <tr>
+                <th>Nom</th>
+                <th>Carte</th>
+                <th>Date</th>
+                <th>Durée</th>
+                <th>Verdict</th>
+                <th>Joueurs</th>
+                <th>Survivants</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for s in sessions %}
+            <tr class="{% if s.verdict == 'SUCCES' %}session-row-succes{% elif s.verdict == 'ECHEC' %}session-row-echec{% elif s.verdict == 'PvP' %}session-row-pvp{% elif s.verdict == 'TRAINING' %}session-row-training{% else %}session-row-indeterminee{% endif %}">
+                <td style="max-width:300px;overflow-x:auto;">
+                    <a href="{% url 'session_detail' s.id %}" style="color:#1976d2;font-weight:600;text-decoration:underline;">{{ s.name }}</a>
+                </td>
+                <td>{{ s.map }}</td>
+                <td>{{ s.start_time|date:'d/m/Y H:i' }}</td>
+                <td>{% if s.duration_min is not None %}{{ s.duration_min }} min{% else %}—{% endif %}</td>
+                <td>{{ s.get_verdict_display }}</td>
+                <td>{{ s.players_count }}</td>
+                <td>{{ s.vivant_count }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+        <div style="color:#888;font-size:1.1em;">Aucune session orpheline trouvée.</div>
+    {% endif %}
+</div>
+{% endblock %}

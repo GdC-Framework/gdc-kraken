@@ -1,0 +1,94 @@
+{% extends 'gdc_storm/base.html' %}
+{% block title %}Bulk Missions Import{% endblock %}
+{% block content %}
+<div class="home-container" style="max-width:900px;margin:40px auto 0 auto;padding:32px 32px 24px 32px;border-radius:18px;background:#fff;box-shadow:0 2px 16px #0002;">
+    <h2 style="font-size:2em;font-weight:700;margin-bottom:24px;">Bulk Missions Import</h2>
+    <div style="margin-bottom:24px;">Déposez plusieurs fichiers de mission (.pbo) ci-dessous pour les importer en masse.</div>
+    <form id="bulk-missions-form" method="post" enctype="multipart/form-data" style="display:flex;flex-direction:column;align-items:center;gap:24px;">
+        {% csrf_token %}
+        <input id="bulk-missions-input" type="file" name="pbo_files" accept=".pbo" multiple style="display:none;" />
+        <div id="drop-area" style="border:2px dashed #1976d2;border-radius:12px;padding:48px 24px;text-align:center;cursor:pointer;background:#f7fafd;color:#1976d2;font-size:1.2em;width:100%;max-width:500px;">
+            Glissez-déposez vos fichiers ici ou cliquez pour sélectionner
+        </div>
+        <div id="file-list" style="margin-top:12px;color:#222;font-size:1em;"></div>
+        <button type="submit" class="home-btn" style="background:#1976d2;color:#fff;padding:14px 36px;font-size:1.1em;border-radius:10px;box-shadow:0 2px 8px #0001;">Publier toutes les missions</button>
+    </form>
+    <div id="bulk-missions-result" style="margin-top:24px;font-size:1.1em;"></div>
+</div>
+<script>
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+const csrftoken = getCookie('csrftoken');
+const dropArea = document.getElementById('drop-area');
+const fileInput = document.getElementById('bulk-missions-input');
+const fileList = document.getElementById('file-list');
+const form = document.getElementById('bulk-missions-form');
+const resultDiv = document.getElementById('bulk-missions-result');
+let files = [];
+
+dropArea.addEventListener('click', () => fileInput.click());
+dropArea.addEventListener('dragover', e => { e.preventDefault(); dropArea.style.background = '#e3f2fd'; });
+dropArea.addEventListener('dragleave', e => { e.preventDefault(); dropArea.style.background = '#f7fafd'; });
+dropArea.addEventListener('drop', e => {
+    e.preventDefault();
+    dropArea.style.background = '#f7fafd';
+    files = Array.from(e.dataTransfer.files).filter(f => f.name.endsWith('.pbo'));
+    fileInput.files = e.dataTransfer.files;
+    updateFileList();
+});
+fileInput.addEventListener('change', e => {
+    files = Array.from(fileInput.files).filter(f => f.name.endsWith('.pbo'));
+    updateFileList();
+});
+function updateFileList() {
+    if (files.length === 0) fileList.textContent = '';
+    else fileList.innerHTML = '<b>Fichiers sélectionnés :</b><br>' + files.map(f => f.name).join('<br>');
+}
+async function uploadMissionFile(file) {
+    const formData = new FormData();
+    formData.append('pbo_file', file);
+    const resp = await fetch('/legacy/bulk_upload/', {
+        method: 'POST',
+        body: formData,
+        credentials: 'same-origin',
+        headers: { 'X-CSRFToken': csrftoken }
+    });
+    let json = null;
+    try { json = await resp.json(); } catch (e) {}
+    return {resp, json};
+}
+form.onsubmit = async function(e) {
+    e.preventDefault();
+    if (files.length === 0) {
+        resultDiv.textContent = 'Aucun fichier sélectionné.';
+        return;
+    }
+    resultDiv.innerHTML = 'Import en cours...';
+    let success = 0, fail = 0, messages = [];
+    for (let i = 0; i < files.length; i++) {
+        let {resp, json} = await uploadMissionFile(files[i]);
+        if (resp.ok && json && json.success) {
+            success++;
+            messages.push(`<span style=\"color:#388e3c\">${files[i].name} : Mission publiée avec succès.</span>`);
+        } else {
+            fail++;
+            let errorMsg = (json && json.error) ? json.error : (resp.statusText || 'Erreur inconnue');
+            messages.push(`<span style=\"color:#d32f2f\">${files[i].name} : Erreur - ${errorMsg}</span>`);
+        }
+    }
+    resultDiv.innerHTML = `<b>${success} mission(s) importée(s), ${fail} échec(s)</b><br>` + messages.join('<br>');
+};
+</script>
+{% endblock %}

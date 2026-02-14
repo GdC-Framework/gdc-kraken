@@ -1,0 +1,273 @@
+/* Training verdict row color */
+.session-row-training {
+    background: #ffe6b3 !important;
+    color: #ff9800 !important;
+}
+/* PvP verdict row color */
+.session-row-pvp {
+    background: #e1b6ff !important;
+    color: #6a1b9a !important;
+}
+body {
+    margin: 0;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #fffbe6;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+.navbar {
+    background: #111;
+    color: #FFD600;
+    padding: 0 30px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+.navbar .nav {
+    display: flex;
+    gap: 20px;
+}
+.navbar a {
+    color: #FFD600;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 1.1em;
+    padding: 8px 16px;
+    border-radius: 4px;
+    transition: background 0.2s, color 0.2s;
+}
+.navbar a:hover {
+    background: #FFD600;
+    color: #111;
+}
+.content {
+    flex: 1;
+    padding: 0;
+}
+footer {
+    background: #111;
+    color: #FFD600;
+    text-align: center;
+    padding: 18px 0 12px 0;
+    font-size: 1em;
+    margin-top: auto;
+    width: 100%;
+}
+.home-hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 60vh;
+    min-height: 400px;
+}
+.home-title {
+    font-size: 3em;
+    font-weight: bold;
+    color: #111;
+    margin-bottom: 0.5em;
+    letter-spacing: 2px;
+}
+.home-desc {
+    font-size: 1.3em;
+    color: #FFD600;
+    margin-bottom: 2em;
+    background: #111;
+    padding: 8px 24px;
+    border-radius: 8px;
+}
+.home-btns {
+    display: flex;
+    gap: 30px;
+    justify-content: center;
+}
+.home-btn {
+    background: #FFD600;
+    color: #111;
+    border: none;
+    border-radius: 8px;
+    padding: 18px 38px;
+    font-size: 1.2em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s, transform 0.2s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+}
+.home-btn:hover {
+    background: #111;
+    color: #FFD600;
+    transform: translateY(-2px) scale(1.04);
+}
+.upload-container {
+    max-width: 500px;
+    margin: 40px auto;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+    padding: 32px 28px 24px 28px;
+    box-sizing: border-box;
+}
+.upload-title {
+    font-size: 2em;
+    color: #111;
+    margin-bottom: 18px;
+    text-align: center;
+}
+.form-group {
+    margin-bottom: 18px;
+    width: 100%;
+    box-sizing: border-box;
+}
+label { font-weight: 500; color: #111; }
+input, select {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #FFD600;
+    margin-top: 6px;
+    font-size: 1em;
+    background: #fffbe6;
+    display: block;
+}
+.dropbox {
+    border: 2px dashed #FFD600;
+    border-radius: 8px;
+    padding: 30px;
+    text-align: center;
+    color: #888;
+    background: #fffbe6;
+    margin-bottom: 18px;
+    cursor: pointer;
+}
+.dropbox.dragover {
+    border-color: #111;
+    color: #111;
+    background: #fffde7;
+}
+.submit-btn {
+    background: #FFD600;
+    color: #111;
+    border: none;
+    border-radius: 6px;
+    padding: 12px 0;
+    width: 100%;
+    font-size: 1.1em;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: background 0.2s, color 0.2s;
+}
+.submit-btn:hover {
+    background: #111;
+    color: #FFD600;
+}
+.missions-container {
+    max-width: 900px;
+    margin: 40px auto;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+    padding: 32px 28px 24px 28px;
+}
+.missions-title {
+    font-size: 2em;
+    color: #222e3c;
+    margin-bottom: 12px;
+    text-align: center;
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 18px;
+}
+th, td {
+    padding: 12px 8px;
+    border-bottom: 1px solid #e0e6ed;
+    text-align: left;
+}
+th {
+    background: #f4f7fa;
+    color: #31415a;
+    font-weight: 600;
+}
+tr:last-child td {
+    border-bottom: none;
+}
+.empty-msg {
+    text-align: center;
+    color: #888;
+    margin: 40px 0 20px 0;
+    font-size: 1.2em;
+}
+.message-block {
+    max-width: 900px;
+    margin: 24px auto 0 auto;
+}
+.message-success {
+    background: #d4edda;
+    color: #155724;
+    padding: 12px 18px;
+    border-radius: 6px;
+    margin-bottom: 18px;
+    text-align: center;
+    font-weight: 600;
+}
+.message-error, .message-danger {
+    background: #fdeaea;
+    color: #b71c1c;
+    padding: 12px 18px;
+    border-radius: 6px;
+    margin-bottom: 18px;
+    text-align: center;
+    font-weight: 600;
+}
+.message-warning {
+    background: #fffbe6;
+    color: #856404;
+    padding: 12px 18px;
+    border-radius: 6px;
+    margin-bottom: 18px;
+    text-align: center;
+    font-weight: 600;
+}
+.message-info {
+    background: #e3f2fd;
+    color: #1976d2;
+    padding: 12px 18px;
+    border-radius: 6px;
+    margin-bottom: 18px;
+    text-align: center;
+    font-weight: 600;
+}
+.session-row-succes {
+    background: #e6f4ea !important;
+}
+.session-row-echec {
+    background: #fdeaea !important;
+}
+.session-row-indeterminee {
+    background: #fffbe6 !important;
+}
+.mission-row-jouable {
+    background: #e6f4ea !important;
+}
+.mission-row-non-jouable, .mission-row-bugguee {
+    background: #fffbe6 !important;
+}
+.mission-row-inconnu {
+    background: #a7daff !important;
+}
+.mission-row-supprimee {
+    background: #fdeaea !important;
+}
+.map-row-even { background: #f7fafd; }
+.map-row-odd { background: #e9f1fa; }
+.modern-table th, .modern-table td { padding: 10px 14px; border-bottom: 1px solid #e0e7ef; }
+.modern-table th { background: #e3eaf6; color: #222; font-weight: 600; }
+.modern-table tr:hover { background: #d0e6fa; }

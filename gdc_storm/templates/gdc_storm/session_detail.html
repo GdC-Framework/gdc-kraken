@@ -1,0 +1,189 @@
+{% extends 'gdc_storm/base.html' %}
+{% block title %}Session : {{ mission_name }}{% endblock %}
+{% block content %}
+<div class="missions-container" style="max-width:1500px;margin:35px auto 0 auto;padding:0 32px 32px 32px;border-radius:18px;box-shadow:0 2px 16px #0002;">
+    <!-- DEBUG: session.verdict = {{ session.verdict }} -->
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div class="missions-title" style="font-size:2.1em;font-weight:700;margin-top:12px;">
+            {% if session.mission %}
+                <a href="{% url 'mission_detail' session.mission.id %}" style="color:#1976d2;text-decoration:underline;">{{ session.name }}</a>
+            {% else %}
+                {{ session.name }}
+            {% endif %}
+        </div>
+        <div style="display:flex;gap:12px;align-items:center;">
+            {% if user_can_edit_verdict %}
+                <button id="verdict-btn" class="home-btn" style="background:#1976d2;color:#fff;padding:7px 22px;font-size:1em;box-shadow:0 2px 8px #0001;border-radius:8px;">Verdict</button>
+            {% endif %}
+            {% if request.user.is_superuser %}
+                <button id="edit-status-btn" class="home-btn" style="background:#1976d2;color:#fff;padding:7px 22px;font-size:1em;box-shadow:0 2px 8px #0001;border-radius:8px;">Éditer joueurs</button>
+            {% endif %}
+            {% if not session.mission and request.user.is_superuser and show_associate_btn %}
+                <button id="associate-mission-btn" class="home-btn" style="background:#FFD600;color:#222;padding:7px 22px;font-size:1em;box-shadow:0 2px 8px #0001;border-radius:8px;">Lier</button>
+            {% endif %}
+        </div>
+    </div>
+    <div id="verdict-popup" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:#0007;z-index:1000;align-items:center;justify-content:center;">
+        <div style="background:#fff;padding:32px 28px 24px 28px;border-radius:16px;min-width:320px;max-width:90vw;box-shadow:0 2px 16px #0003;position:relative;">
+            <button id="close-verdict-popup" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:1.5em;color:#888;cursor:pointer;">&times;</button>
+            <form method="post" action="" style="margin:0;">
+                {% csrf_token %}
+                <label for="verdict" style="font-weight:600;margin-right:8px;">Sélectionner le verdict :</label>
+                <select name="verdict" id="verdict" style="padding:6px 12px;">
+                    {% for value, label in session.VERDICT_CHOICES %}
+                        <option value="{{ value }}" {% if session.verdict == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" name="set_verdict" class="home-btn" style="background:#1976d2;color:#fff;padding:6px 18px;font-size:1em;margin-left:8px;">Enregistrer</button>
+            </form>
+        </div>
+    </div>
+    <div id="associate-mission-popup" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:#0007;z-index:1100;align-items:center;justify-content:center;">
+        <div style="background:#fff;padding:32px 28px 24px 28px;border-radius:16px;min-width:320px;max-width:90vw;box-shadow:0 2px 16px #0003;position:relative;">
+            <button id="close-associate-popup" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:1.5em;color:#888;cursor:pointer;">&times;</button>
+            {% if no_mission_found %}
+                <div style="color:#b71c1c;font-weight:600;margin-bottom:18px;">Aucune mission correspondante n'a été trouvée pour cette session.</div>
+            {% else %}
+            <form method="post" action="" style="margin:0;">
+                {% csrf_token %}
+                <label for="mission_id" style="font-weight:600;margin-right:8px;">Associer à une mission existante :</label>
+                <select name="mission_id" id="mission_id" style="padding:6px 12px;min-width:220px;" {% if no_mission_found %}disabled{% endif %}>
+                    {% for m in missions_candidates %}
+                        <option value="{{ m.id }}">{{ m.name }} ({{ m.map }})</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="home-btn" style="background:#1976d2;color:#fff;padding:6px 18px;font-size:1em;margin-left:8px;" {% if no_mission_found %}disabled{% endif %}>Associer</button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+    <script>
+    const verdictBtn = document.getElementById('verdict-btn');
+    const verdictPopup = document.getElementById('verdict-popup');
+    const closeVerdictPopup = document.getElementById('close-verdict-popup');
+    if(verdictBtn && verdictPopup && closeVerdictPopup) {
+        verdictBtn.onclick = function() { verdictPopup.style.display = 'flex'; };
+        closeVerdictPopup.onclick = function() { verdictPopup.style.display = 'none'; };
+        verdictPopup.onclick = function(e) { if(e.target === verdictPopup) verdictPopup.style.display = 'none'; };
+    }
+    // Popup association mission
+    const associateBtn = document.getElementById('associate-mission-btn');
+    const associatePopup = document.getElementById('associate-mission-popup');
+    const closeAssociatePopup = document.getElementById('close-associate-popup');
+    if(associateBtn && associatePopup && closeAssociatePopup) {
+        associateBtn.onclick = function() { associatePopup.style.display = 'flex'; };
+        closeAssociatePopup.onclick = function() { associatePopup.style.display = 'none'; };
+        associatePopup.onclick = function(e) { if(e.target === associatePopup) associatePopup.style.display = 'none'; };
+    }
+    </script>
+    {% if messages %}
+        {% for message in messages %}
+            <div style="background:#d4edda;color:#155724;padding:12px 18px;border-radius:6px;margin-bottom:18px;text-align:center;font-weight:600;">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+    <table style="width:100%;table-layout:auto;margin-bottom:32px;">
+        <thead>
+            <tr>
+                <th>Nom de la mission</th>
+                <th>Carte</th>
+                <th>Date</th>
+                <th>Durée</th>
+                <th>Verdict</th>
+                <th>Joueurs</th>
+                <th>Survivants</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr class="{% if session.verdict == 'SUCCES' %}session-row-succes{% elif session.verdict == 'ECHEC' %}session-row-echec{% elif session.verdict == 'PvP' %}session-row-pvp{% elif session.verdict == 'TRAINING' %}session-row-training{% else %}session-row-indeterminee{% endif %}">
+                <td>{{ session.name }}</td>
+                <td>{{ map_display }}</td>
+                <td>{{ session.start_time|date:'d/m/Y H:i' }}</td>
+                <td>{% if duration_min is not None %}{{ duration_min }}{% else %}—{% endif %}</td>
+                <td>{{ session.get_verdict_display }}</td>
+                <td>{{ players_count }}</td>
+                <td>{{ vivant_count }}</td>
+            </tr>
+        </tbody>
+    </table>
+    <h3 style="font-size:1.2em;font-weight:700;margin-bottom:12px;">Liste des joueurs</h3>
+    {% if request.user.is_superuser %}
+    <div id="edit-status-popup" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:#0007;z-index:1200;align-items:center;justify-content:center;">
+        <div style="background:#fff;padding:32px 28px 24px 28px;border-radius:16px;min-width:320px;max-width:90vw;box-shadow:0 2px 16px #0003;position:relative;max-height:90vh;overflow-y:auto;">
+            <button id="close-edit-status-popup" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:1.5em;color:#888;cursor:pointer;">&times;</button>
+            <form method="post" action="" style="margin:0;">
+                {% csrf_token %}
+                <h4 style="margin-bottom:18px;">Modifier le statut des joueurs</h4>
+                <div style="max-height:60vh;overflow-y:auto;">
+                <table style="width:100%;margin-bottom:18px;">
+                    <thead>
+                        <tr><th>Joueur</th><th>Rôle</th><th>Statut</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for gsp in session_players %}
+                        <tr>
+                            <td>{{ gsp.player.name }}</td>
+                            <td>{{ gsp.role|default:"—" }}</td>
+                            <td>
+                                <select name="status_{{ gsp.id }}" style="padding:4px 10px;">
+                                    <option value="VIVANT" {% if gsp.status == 'VIVANT' %}selected{% endif %}>Vivant</option>
+                                    <option value="MORT" {% if gsp.status == 'MORT' %}selected{% endif %}>Mort</option>
+                                </select>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                </div>
+                <button type="submit" name="edit_status" class="home-btn" style="background:#1976d2;color:#fff;padding:6px 18px;font-size:1em;">Enregistrer</button>
+            </form>
+        </div>
+    </div>
+    <script>
+    const editStatusBtn = document.getElementById('edit-status-btn');
+    const editStatusPopup = document.getElementById('edit-status-popup');
+    const closeEditStatusPopup = document.getElementById('close-edit-status-popup');
+    if(editStatusBtn && editStatusPopup && closeEditStatusPopup) {
+        editStatusBtn.onclick = function() { editStatusPopup.style.display = 'flex'; };
+        closeEditStatusPopup.onclick = function() { editStatusPopup.style.display = 'none'; };
+        editStatusPopup.onclick = function(e) { if(e.target === editStatusPopup) editStatusPopup.style.display = 'none'; };
+    }
+    </script>
+    {% endif %}
+    <table style="width:100%;border-collapse:separate;border-spacing:0 4px;">
+        <thead>
+            <tr style="background:#f5f5f5;">
+                <th style="text-align:left;padding:8px 12px;">Nom du joueur</th>
+                <th style="text-align:left;padding:8px 12px;">Rôle</th>
+                <th style="text-align:left;padding:8px 12px;">Statut en fin de partie</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for gsp in session_players %}
+            <tr {% if forloop.counter0|divisibleby:2 %}style="background:#cbe3ff;"{% else %}style="background:#fff;"{% endif %}>
+                <td style="padding:8px 12px;">
+                    <a href="{% url 'player_detail' gsp.player.id %}" style="color:#1976d2;font-weight:600;text-decoration:underline;">
+                        {{ gsp.player.name }}
+                    </a>
+                </td>
+                <td style="padding:8px 12px;">{{ gsp.role|default:"—" }}</td>
+                <td style="padding:8px 12px;">
+                    {% if gsp.status == 'VIVANT' %}
+                        <span style="color:#43a047;font-weight:600;">Vivant</span>
+                    {% elif gsp.status == 'MORT' %}
+                        <span style="color:#e53935;font-weight:600;">Mort</span>
+                    {% else %}
+                        <span style="color:#888;">—</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="3" style="text-align:center;color:#888;padding:18px;">Aucun joueur pour cette session.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

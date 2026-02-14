@@ -1,0 +1,122 @@
+{% extends 'gdc_storm/base.html' %}
+{% block content %}
+{% if messages %}
+    <div class="message-block">
+        {% for message in messages %}
+            <div class="message-{{ message.tags|default:'info' }}">{{ message }}</div>
+        {% endfor %}
+    </div>
+{% endif %}
+<style>
+@media (max-width: 900px) {
+  .upload-container { padding: 24px 8px 18px 8px !important; }
+  .mission-duplicate-warning { padding: 18px 4px 14px 4px !important; }
+}
+</style>
+<div class="upload-container" style="background:#fff;max-width:1100px;width:100%;margin:36px auto 0 auto;padding:40px 56px 32px 56px;border-radius:18px;box-shadow:0 6px 32px #0002;box-sizing:border-box;">
+    <div class="upload-title">Publier une mission</div>
+    {% if error_message %}
+        <div style="background:#ffeaea;color:#b71c1c;padding:12px 18px;border-radius:6px;margin-bottom:18px;text-align:center;font-weight:600;">
+            {{ error_message }}
+        </div>
+    {% endif %}
+    {% if show_confirm %}
+        <form method="post" enctype="multipart/form-data" id="confirm-form">
+            {% csrf_token %}
+            <input type="hidden" name="confirm_publish" value="1">
+            <input type="hidden" name="temp_file_path" value="{{ temp_file_path }}">
+            <input type="hidden" name="temp_file_name" value="{{ temp_file_name }}">
+            <div class="mission-duplicate-warning" style="background:#fff3cd;color:#856404;padding:32px 32px 28px 32px;border-radius:16px;margin-bottom:32px;text-align:left;font-weight:500;box-shadow:0 6px 32px #0002;width:100%;max-width:100%;margin:0 auto;box-sizing:border-box;overflow-x:auto;">
+                <div style="font-weight:700;font-size:1.3em;margin-bottom:16px;">⚠️ Missions du même nom détectées</div>
+                <div style="margin-bottom:16px;">Des missions avec ce nom existent déjà dans la base&nbsp;:</div>
+                <table style="width:100%;margin-bottom:24px;border-collapse:separate;border-spacing:0 6px;">
+                    <thead>
+                        <tr style="font-size:1.08em;text-align:left;">
+                            <th style="padding-right:24px;">Nom</th>
+                            <th style="padding-right:24px;">Carte</th>
+                            <th>Propriétaire</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for m in duplicate_missions %}
+                        <tr style="background:transparent;">
+                            <td style="padding-right:24px;"><b>{{ m.full_name }}</b></td>
+                            <td style="padding-right:24px;">{{ m.map }}</td>
+                            <td><b>{{ m.owner }}</b></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <div style="margin-bottom:24px;">Voulez-vous vraiment publier la mission <b>{{ filename }}</b> ?</div>
+                <div style="display:flex;gap:24px;justify-content:center;align-items:center;">
+                    <button type="submit" class="submit-btn" style="background:#FFD600;color:#111;min-width:200px;font-weight:700;font-size:1.1em;">Oui, publier quand même</button>
+                    <a href="/upload/" class="submit-btn" style="background:#e53935;color:#fff;min-width:140px;text-align:center;font-weight:700;font-size:1.1em;">Annuler</a>
+                </div>
+            </div>
+        </form>
+    {% elif show_update_confirm %}
+    <form method="post" enctype="multipart/form-data" id="update-confirm-form">
+        {% csrf_token %}
+        <input type="hidden" name="confirm_update" value="1">
+        {% if temp_file_path %}
+            <input type="hidden" name="temp_file_path" value="{{ temp_file_path }}">
+        {% endif %}
+        {% if temp_file_name %}
+            <input type="hidden" name="temp_file_name" value="{{ temp_file_name }}">
+        {% endif %}
+        <div class="mission-duplicate-warning" style="background:#fff3cd;color:#856404;padding:32px 32px 28px 32px;border-radius:16px;margin-bottom:32px;text-align:left;font-weight:500;box-shadow:0 6px 32px #0002;width:100%;max-width:100%;margin:0 auto;box-sizing:border-box;overflow-x:auto;">
+            <div style="font-weight:700;font-size:1.3em;margin-bottom:16px;">⚠️ Mise à jour de mission détectée</div>
+            <div style="margin-bottom:18px;">Vous êtes sur le point de <b>mettre à jour</b> la mission suivante :</div>
+            <table style="width:auto;margin-bottom:24px;border-collapse:separate;border-spacing:0 6px;">
+                <tr><td style="font-weight:600;padding-right:18px;">Nom :</td><td><b>{{ mission_name }}</b></td></tr>
+                <tr><td style="font-weight:600;padding-right:18px;">Carte :</td><td><b>{{ map }}</b></td></tr>
+                <tr><td style="font-weight:600;padding-right:18px;">Ancienne version :</td><td><b>{{ old_version }}</b></td></tr>
+                <tr><td style="font-weight:600;padding-right:18px;">Nouvelle version :</td><td><b>{{ new_version }}</b></td></tr>
+            </table>
+            <div style="margin-bottom:24px;">Confirmez-vous la <b>mise à jour</b> cette mission ?</div>
+            <div style="display:flex;gap:24px;justify-content:center;align-items:center;">
+                <button type="submit" class="submit-btn" style="background:#FFD600;color:#111;min-width:200px;font-weight:700;font-size:1.1em;">Oui, mettre à jour</button>
+                <a href="/upload/" class="submit-btn" style="background:#e53935;color:#fff;min-width:140px;text-align:center;font-weight:700;font-size:1.1em;">Annuler</a>
+            </div>
+        </div>
+    </form>
+    {% else %}
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="dropbox" id="dropbox">
+            <input type="file" name="pbo_file" id="pbo_file" accept=".pbo" style="display:none;">
+            <span id="dropbox-text">Déposez votre fichier .pbo ici ou cliquez pour sélectionner</span>
+        </div>
+        <button type="submit" class="submit-btn">Publier</button>
+    </form>
+    {% endif %}
+</div>
+<script>
+    const dropbox = document.getElementById('dropbox');
+    const fileInput = document.getElementById('pbo_file');
+    if (dropbox && fileInput) {
+        dropbox.addEventListener('click', () => fileInput.click());
+        dropbox.addEventListener('dragover', e => {
+            e.preventDefault();
+            dropbox.classList.add('dragover');
+        });
+        dropbox.addEventListener('dragleave', e => {
+            e.preventDefault();
+            dropbox.classList.remove('dragover');
+        });
+        dropbox.addEventListener('drop', e => {
+            e.preventDefault();
+            dropbox.classList.remove('dragover');
+            if (e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files;
+                document.getElementById('dropbox-text').textContent = e.dataTransfer.files[0].name;
+            }
+        });
+        fileInput.addEventListener('change', e => {
+            if (fileInput.files.length) {
+                document.getElementById('dropbox-text').textContent = fileInput.files[0].name;
+            }
+        });
+    }
+</script>
+{% endblock %}
