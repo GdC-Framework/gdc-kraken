@@ -151,7 +151,7 @@ def upload_mission(request):
                     })
                 existing_mission = existing.first()
                 updated_mission, error_message = update_mission_from_pbo(
-                    request, existing_mission, temp_file_path, temp_file_name, mission_type, max_players, version, map_name
+                    request, existing_mission, temp_file_path, filename, mission_type, max_players, version, map_name
                 )
                 if error_message:
                     return render(request, 'gdc_storm/upload_mission.html', {
@@ -577,9 +577,9 @@ def create_mission_from_pbo(request, temp_file_path, filename, mission_name, mis
         mission.briefing_images = briefing_images
         mission.save(update_fields=['briefing_images'])
     try:
-        os.remove(temp_file_path)
+        os.rename(temp_file_path, os.path.join(settings.MISSIONS_PBO_STORAGE_PATH, filename))
     except Exception as e:
-        logging.warning(f"Erreur lors de la suppression du fichier temporaire {temp_file_path}: {e}")
+        return mission, f"Mission créée, mais erreur lors de la sauvegarde du PBO: {e}"
     return mission, None
 
 def format_errors(errors):
@@ -587,7 +587,7 @@ def format_errors(errors):
         return None
     return '<br/>'.join(errors)
 
-def update_mission_from_pbo(request, existing_mission, temp_file_path, temp_file_name, mission_type, max_players, version, map_name):
+def update_mission_from_pbo(request, existing_mission, temp_file_path, filename, mission_type, max_players, version, map_name):
     is_admin = request.user.is_superuser
     is_owner = existing_mission.user == request.user
     if not (is_admin or is_owner):
@@ -614,10 +614,7 @@ def update_mission_from_pbo(request, existing_mission, temp_file_path, temp_file
         briefing, briefing_images = extract_briefing_from_pbo(pbo)
     except Exception as e:
         return None, f"Erreur lors de l'extraction du briefing : {e}"
-    try:
-        os.remove(temp_file_path)
-    except Exception:
-        pass
+
     if not is_admin:
         existing_mission.user = request.user
     existing_mission.authors = data['author'] or ''
@@ -664,6 +661,10 @@ def update_mission_from_pbo(request, existing_mission, temp_file_path, temp_file
             loadscreen_file = None
     existing_mission.loadScreen = loadscreen_file
     existing_mission.save()
+    try:
+        os.rename(temp_file_path, os.path.join(settings.MISSIONS_PBO_STORAGE_PATH, filename))
+    except Exception as e:
+        return existing_mission, f"Mission mise à jour, mais erreur lors de la sauvegarde du PBO: {e}"
     return existing_mission, None
 
 def player_list(request):

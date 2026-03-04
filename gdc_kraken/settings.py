@@ -145,6 +145,9 @@ LOGOUT_REDIRECT_URL = '/'
 MISSIONS_STORAGE_PATH = os.environ.get('MISSIONS_STORAGE_PATH', 'missions')
 MISSIONS_IMAGES_STORAGE_PATH = os.environ.get('MISSIONS_IMAGES_STORAGE_PATH', os.path.join('missions', 'images'))
 
+# Chemin personnalisé pour le stockage des missions
+MISSIONS_PBO_STORAGE_PATH = config_data["MISSIONS_PBO_STORAGE_PATH"]
+
 # Fichiers médias (missions, loadScreen)
 MEDIA_ROOT = BASE_DIR / 'missions'
 MEDIA_URL = '/media/'
