@@ -1,0 +1,45 @@
+{% extends 'gdc_storm/base.html' %}
+{% block title %}PlayerMapping{% endblock %}
+{% block content %}
+{% if messages %}
+    <div class="message-block">
+        {% for message in messages %}
+            <div class="message-{{ message.tags|default:'info' }}">{{ message }}</div>
+        {% endfor %}
+    </div>
+{% endif %}
+<div class="missions-container" style="max-width:600px;margin:40px auto 0 auto;padding:0 32px 32px 32px;border-radius:18px;background:#fff;box-shadow:0 2px 16px #0002;">
+    <div class="missions-title" style="margin-top:24px;">Associer un pseudo</div>
+    {% if success %}
+        <div style="background:#d4edda;color:#155724;padding:12px 18px;border-radius:6px;margin-bottom:18px;text-align:center;font-weight:600;">Nouvelle(s) association(s) sauvegardée(s)</div>
+    {% endif %}
+    <form method="post" style="margin-top:24px;">
+        {% csrf_token %}
+        <table style="width:100%;">
+            <thead><tr><th>Associer</th><th>Nom</th><th>Utilisateur associé</th></tr></thead>
+            <tbody>
+            {% for player in players %}
+                <tr>
+                    <td>
+                        {% if player.users.count == 0 or player.id in selected_ids %}
+                            <input type="checkbox" name="players" value="{{ player.id }}" {% if player.id in selected_ids %}checked{% endif %}>
+                        {% else %}
+                            <input type="checkbox" disabled>
+                        {% endif %}
+                    </td>
+                    <td>{{ player.name }}</td>
+                    <td>
+                        {% if player.users.count > 0 %}
+                            {{ player.users.first.username }}
+                        {% else %}-{% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        <div style="margin-top:24px;text-align:right;">
+            <button type="submit" class="home-btn" style="background:#FFD600;color:#111;padding:8px 24px;font-size:1em;">Sauvegarder</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

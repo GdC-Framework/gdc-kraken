@@ -1,0 +1,31 @@
+{% extends 'gdc_storm/base.html' %}
+{% block title %}Accueil - GDC Storm{% endblock %}
+{% block content %}
+{% if messages %}
+    <div class="message-block">
+        {% for message in messages %}
+            <div class="message-{{ message.tags|default:'info' }}">{{ message }}</div>
+        {% endfor %}
+    </div>
+{% endif %}
+<div class="home-hero">
+    <div class="home-title">GDC Storm</div>
+    <div class="home-desc" style="background: none; color: #111; font-weight: 500;">Gestionnaire de missions pour la communauté Grèce de Canards</div>
+    <div class="home-btns">
+        <a href="/missions/"><button class="home-btn" style="background: #FFD600; color: #111;">Liste des missions</button></a>
+        <a href="/sessions/"><button class="home-btn" style="background: #FFD600; color: #111; margin-left: 12px;">Liste des sessions</button></a>
+        {% if user.is_authenticated %}
+            {% if user.is_superuser %}
+                <a href="/upload/"><button class="home-btn" style="background: #FFD600; color: #111;">Publier une mission</button></a>
+            {% else %}
+                {% for group in user.groups.all %}
+                    {% if group.name == 'Mission Maker' %}
+                        <a href="/upload/"><button class="home-btn" style="background: #FFD600; color: #111;">Publier une mission</button></a>
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+        {% endif %}
+    </div>
+    <!-- Suppression du bloc statistiques -->
+</div>
+{% endblock %}

@@ -1,0 +1,286 @@
+
+{% extends 'gdc_storm/base.html' %}
+{% block title %}Outils pour l'export de l'historique{% endblock %}
+{% block content %}
+<div class="home-container" style="max-width:900px;margin:40px auto 0 auto;padding:32px 32px 24px 32px;border-radius:18px;background:#fff;box-shadow:0 2px 16px #0002;">
+    <h2 style="font-size:2em;font-weight:700;margin-bottom:24px;">Outils pour l'export de l'historique</h2>
+    <div style="display:flex;flex-wrap:wrap;gap:24px;justify-content:center;">
+        <button onclick="window.location.href='/legacy/bulk_missions/'" class="home-btn" style="background:#388e3c;color:#fff;padding:18px 36px;font-size:1.2em;border-radius:12px;box-shadow:0 2px 8px #0001;">BulkMissions (importer plusieurs missions)</button>
+        <button id="show-import-errors-btn" class="home-btn" style="background:#d32f2f;color:#fff;">Afficher les erreurs d'import</button>
+        <button id="clear-legacy-dbs-btn" class="home-btn" style="background:#d32f2f;color:#fff;">Vider les DB Legacy</button>
+        <div id="clear-legacy-dbs-msg" style="margin-top:8px;"></div>
+    </div>
+    <div id="import-errors-modal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:#0007;z-index:3000;align-items:center;justify-content:center;">
+        <div style="background:#fff;padding:32px 32px 24px 32px;border-radius:12px;box-shadow:0 2px 24px #0006;min-width:320px;max-width:90vw;max-height:80vh;overflow:auto;">
+            <h3>Erreurs d'import bulk</h3>
+            <ul id="import-errors-list" style="margin:18px 0 0 0;padding:0;list-style:none;"></ul>
+            <button onclick="document.getElementById('import-errors-modal').style.display='none'" class="home-btn" style="background:#888;color:#fff;margin-top:18px;">Fermer</button>
+        </div>
+    </div>
+    <div style="margin-top:32px;color:#888;font-size:1.1em;text-align:center;">Outils pour migration ou import/export massif de données.</div>
+    <hr style="margin:32px 0;">
+    <h3>Sélectionner un utilisateur lié (linkedUser)</h3>
+    <form method="get" style="margin-bottom:24px;display:flex;align-items:center;gap:16px;">
+        <label for="linkeduser-select">Utilisateur lié :</label>
+        <select name="linkedUser" id="linkeduser-select" onchange="this.form.submit()">
+            <option value="">-- Choisir un utilisateur --</option>
+            {% for user in linked_users %}
+                <option value="{{ user }}" {% if user == selected_user %}selected{% endif %}>{{ user }}</option>
+            {% endfor %}
+        </select>
+    </form>
+    {% if selected_user %}
+        <div style="margin-bottom:16px;">
+            <b>{{ mission_count }}</b> mission(s) pour l'utilisateur lié <b>{{ selected_user }}</b>
+        </div>
+        <ul style="margin-bottom:16px;">
+            {% for mission in missions %}
+                <li>
+                    {{ mission.name }}
+                    {% if selected_user == 'Non renseigné' %}
+                        <input type="text" id="linkeduser-mission-{{ mission.id }}" value="" placeholder="Nouveau linkedUser" style="padding:4px 8px;border-radius:6px;border:1px solid #ccc;margin-left:8px;">
+                        <button type="button" class="home-btn" style="background:#ffa000;color:#fff;padding:2px 10px;font-size:0.95em;" onclick="updateLinkedUserMission({{ mission.id }})">Enregistrer</button>
+                    {% endif %}
+                </li>
+            {% endfor %}
+        </ul>
+        <button id="create-user-linked-btn" class="home-btn" style="background:#1976d2;color:#fff;margin-right:12px;">Créer un utilisateur "{{ selected_user }}"</button>
+        <input id="new-linkeduser-name" type="text" placeholder="Nouveau linkedUser" style="padding:6px 12px;border-radius:6px;border:1px solid #ccc;">
+            <button id="update-linkeduser-btn" class="home-btn" style="background:#ffa000;color:#fff;">Renommer linkedUser</button>
+        <button id="export-missions-btn" class="home-btn" style="background:#388e3c;color:#fff;margin-left:12px;">Exporter ces missions vers la DB principale</button>
+        <div id="legacy-linkeduser-msg" style="margin-top:16px;"></div>
+        <script>
+        function updateLinkedUserMission(missionId) {
+            const input = document.getElementById('linkeduser-mission-' + missionId);
+            const newUser = input.value.trim();
+            if (!newUser) {
+                document.getElementById('legacy-linkeduser-msg').innerHTML = '<span style="color:red">Veuillez saisir un nom.</span>';
+                return;
+            }
+            fetch("/legacy/update_linked_user/", {
+                method: "POST",
+                headers: {"X-CSRFToken": '{{ csrf_token }}', "Content-Type": "application/x-www-form-urlencoded"},
+                body: "mission_id="+missionId+"&new_user="+encodeURIComponent(newUser)
+            }).then(function(r) { return r.json(); }).then(function(data) {
+                document.getElementById('legacy-linkeduser-msg').innerHTML = data.success ? '<span style="color:green">'+data.message+'</span>' : '<span style="color:red">'+data.error+'</span>';
+                if (data.success) setTimeout(()=>window.location.reload(), 1200);
+            });
+        }
+        document.getElementById('create-user-linked-btn').onclick = function(e) {
+            e.preventDefault();
+            fetch("/legacy/create_user_from_linkeduser/", {
+                method: "POST",
+                headers: {"X-CSRFToken": '{{ csrf_token }}', "Content-Type": "application/x-www-form-urlencoded"},
+                body: "linkedUser=" + encodeURIComponent("{{ selected_user }}")
+            }).then(r => r.json()).then(data => {
+                if(data.success && data.password) {
+                    document.getElementById('legacy-linkeduser-msg').innerHTML = '<span style="color:green">'+data.message+'<br>Mot de passe : <b>'+data.password+'</b></span>';
+                } else {
+                    document.getElementById('legacy-linkeduser-msg').innerHTML = '<span style="color:red">'+data.error+'</span>';
+                }
+            });
+        };
+        document.getElementById('update-linkeduser-btn').onclick = function(e) {
+            e.preventDefault();
+            const newName = document.getElementById('new-linkeduser-name').value.trim();
+            if (!newName) {
+                document.getElementById('legacy-linkeduser-msg').innerHTML = '<span style="color:red">Veuillez saisir un nouveau nom.</span>';
+                return;
+            }
+            fetch("/legacy/update_linked_user/", {
+                method: "POST",
+                headers: {"X-CSRFToken": '{{ csrf_token }}', "Content-Type": "application/x-www-form-urlencoded"},
+                body: "old_user="+encodeURIComponent("{{ selected_user }}")+"&new_user="+encodeURIComponent(newName)
+            }).then(r => r.json()).then(data => {
+                document.getElementById('legacy-linkeduser-msg').innerHTML = data.success ? '<span style="color:green">'+data.message+'</span>' : '<span style="color:red">'+data.error+'</span>';
+                if (data.success) setTimeout(()=>window.location.reload(), 1200);
+            });
+        };
+        document.getElementById('export-missions-btn').onclick = function(e) {
+            e.preventDefault();
+            fetch("/legacy/export_legacy_missions_to_main/", {
+                method: "POST",
+                headers: {"X-CSRFToken": '{{ csrf_token }}', "Content-Type": "application/x-www-form-urlencoded"},
+                body: "linkedUser=" + encodeURIComponent("{{ selected_user }}")
+            }).then(r => r.json()).then(data => {
+                document.getElementById('legacy-linkeduser-msg').innerHTML = data.success ? '<span style="color:green">'+data.message+'</span>' : '<span style="color:red">'+data.error+'</span>';
+            });
+        };
+        document.getElementById('clear-legacy-dbs-btn').onclick = function(e) {
+            e.preventDefault();
+            if (!confirm('Confirmer la suppression de toutes les données Legacy ?')) return;
+            fetch('/legacy/clear_legacy_dbs/', {
+                method: 'POST',
+                headers: {"X-CSRFToken": '{{ csrf_token }}', "Content-Type": "application/x-www-form-urlencoded"}
+            }).then(function(r) { return r.json(); }).then(function(data) {
+                const msgDiv = document.getElementById('clear-legacy-dbs-msg');
+                if (data.success) {
+                    msgDiv.innerHTML = '<span style="color:green">' + data.message + '</span>';
+                } else {
+                    msgDiv.innerHTML = '<span style="color:red">' + (data.message || data.error) + '</span>';
+                }
+                if (data.success) setTimeout(()=>window.location.reload(), 1200);
+            });
+        };
+        document.getElementById('show-import-errors-btn').onclick = function() {
+            fetch('/legacy/get_legacy_import_errors/')
+                .then(r => r.json())
+                .then(data => {
+                    const ul = document.getElementById('import-errors-list');
+                    ul.innerHTML = '';
+                    if (!data.errors.length) {
+                        ul.innerHTML = '<li style="color:#388e3c">Aucune erreur d\'import enregistrée.</li>';
+                    } else {
+                        data.errors.forEach(err => {
+                            const li = document.createElement('li');
+                            li.innerHTML = `<b>${err.filename}</b> <span style='color:#888;font-size:0.95em;'>(${err.created_at})</span><br><span style='color:#d32f2f'>${err.error_message}</span> <button onclick="deleteImportError(${err.id}, this)" style='margin-left:12px;background:#d32f2f;color:#fff;border:none;padding:2px 10px;border-radius:6px;cursor:pointer;'>Supprimer</button>`;
+                            ul.appendChild(li);
+                        });
+                    }
+                    document.getElementById('import-errors-modal').style.display = 'flex';
+                });
+        };
+        function deleteImportError(id, btn) {
+            fetch('/legacy/delete_legacy_import_error/', {
+                method: 'POST',
+                headers: {"X-CSRFToken": '{{ csrf_token }}', "Content-Type": "application/x-www-form-urlencoded"},
+                body: 'error_id=' + id
+            }).then(r => r.json()).then(data => {
+                if(data.success) {
+                    btn.parentElement.remove();
+                }
+            });
+        }
+        </script>
+    {% endif %}
+    <hr style="margin:32px 0;">
+    <h3>Import joueurs (CSV)</h3>
+    <form id="import-players-form" enctype="multipart/form-data" style="margin-bottom:24px;display:flex;align-items:center;gap:16px;">
+        <input type="file" name="csv_file" id="csv-file-input" accept=".csv" required>
+        <button type="submit" class="home-btn" style="background:#1976d2;color:#fff;">Importer</button>
+    </form>
+    <div id="import-players-result" style="margin-bottom:24px;"></div>
+    <script>
+    document.getElementById('import-players-form').onsubmit = function(e) {
+        e.preventDefault();
+        const input = document.getElementById('csv-file-input');
+        if (!input.files.length) return;
+        const formData = new FormData();
+        formData.append('csv_file', input.files[0]);
+        fetch('/legacy/import_players_csv/', {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+        }).then(function(r) { return r.json(); }).then(function(data) {
+            document.getElementById('import-players-result').innerHTML = data.success ? '<span style="color:green">'+data.message+'</span>' : '<span style="color:red">'+(data.message||data.error)+'</span>';
+        });
+    };
+    </script>
+        <h3>Import rôles (CSV)</h3>
+    <form id="import-roles-form" enctype="multipart/form-data" style="margin-bottom:24px;display:flex;align-items:center;gap:16px;">
+        <input type="file" name="csv_file" id="csv-roles-file-input" accept=".csv" required>
+        <button type="submit" class="home-btn" style="background:#1976d2;color:#fff;">Importer</button>
+    </form>
+    <div id="import-roles-result" style="margin-bottom:24px;"></div>
+    <script>
+    document.getElementById('import-roles-form').onsubmit = function(e) {
+        e.preventDefault();
+        const input = document.getElementById('csv-roles-file-input');
+        if (!input.files.length) return;
+        const formData = new FormData();
+        formData.append('csv_file', input.files[0]);
+        fetch('/legacy/import_roles_csv/', {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+        }).then(function(r) { return r.json(); }).then(function(data) {
+            document.getElementById('import-roles-result').innerHTML = data.success ? '<span style="color:green">'+data.message+'</span>' : '<span style="color:red">'+(data.message||data.error)+'</span>';
+        });
+    };
+    </script>
+    <h3>Import GameSessions (CSV)</h3>
+    <form id="import-gamesessions-form" enctype="multipart/form-data" style="margin-bottom:24px;display:flex;align-items:center;gap:16px;">
+        <input type="file" name="csv_file" id="csv-gamesessions-file-input" accept=".csv" required>
+        <button type="submit" class="home-btn" style="background:#1976d2;color:#fff;">Importer</button>
+    </form>
+    <div id="import-gamesessions-result" style="margin-bottom:24px;"></div>
+    <script>
+    document.getElementById('import-gamesessions-form').onsubmit = function(e) {
+        e.preventDefault();
+        const input = document.getElementById('csv-gamesessions-file-input');
+        if (!input.files.length) return;
+        const formData = new FormData();
+        formData.append('csv_file', input.files[0]);
+        fetch('/legacy/import_gamesessions_csv/', {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+        }).then(function(r) { return r.json(); }).then(function(data) {
+            document.getElementById('import-gamesessions-result').innerHTML = data.success ? '<span style="color:green">'+data.message+'</span>' : '<span style="color:red">'+(data.message||data.error)+'</span>';
+        });
+    };
+    </script>
+    <h3>Import MapNames (CSV)</h3>
+    <form id="import-mapnames-form" enctype="multipart/form-data" style="margin-bottom:24px;display:flex;align-items:center;gap:16px;">
+        <input type="file" name="csv_file" id="csv-mapnames-file-input" accept=".csv" required>
+        <button type="submit" class="home-btn" style="background:#1976d2;color:#fff;">Importer</button>
+    </form>
+    <div id="import-mapnames-result" style="margin-bottom:24px;"></div>
+    <script>
+    document.getElementById('import-mapnames-form').onsubmit = function(e) {
+        e.preventDefault();
+        const input = document.getElementById('csv-mapnames-file-input');
+        if (!input.files.length) return;
+        const formData = new FormData();
+        formData.append('csv_file', input.files[0]);
+        fetch('/legacy/import_mapnames_csv/', {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+        }).then(function(r) { return r.json(); }).then(function(data) {
+            document.getElementById('import-mapnames-result').innerHTML = data.success ? '<span style="color:green">'+data.message+'</span>' : '<span style="color:red">'+(data.message||data.error)+'</span>';
+        });
+    };
+    </script>
+    <div id="import-gspr-result" style="margin-bottom:24px;"></div>
+    <h3>Import mapping GameSession/Joueur/Rôle (CSV)</h3>
+    <form id="import-gspr-form" enctype="multipart/form-data" style="margin-bottom:24px;display:flex;align-items:center;gap:16px;">
+        <input type="file" name="csv_file" id="csv-gspr-file-input" accept=".csv" required>
+        <button type="submit" class="home-btn" style="background:#1976d2;color:#fff;">Importer</button>
+    </form>
+    <script>
+    document.getElementById('import-gspr-form').onsubmit = function(e) {
+        e.preventDefault();
+        const input = document.getElementById('csv-gspr-file-input');
+        if (!input.files.length) return;
+        const formData = new FormData();
+        formData.append('csv_file', input.files[0]);
+        const resultDiv = document.getElementById('import-gspr-result');
+        resultDiv.innerHTML = '<span style="color:#1976d2">Import en cours...</span>';
+        fetch('/legacy/import_gamesession_player_role_csv/', {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+        }).then(function(r) { return r.json(); }).then(function(data) {
+            resultDiv.innerHTML = data.success ? '<span style="color:green">'+data.message+'</span>' : '<span style="color:red">'+(data.message||data.error)+'</span>';
+        });
+    };
+    </script>
+    <hr style="margin:32px 0;">
+    <button id="import-legacy-gamesessions-btn" class="home-btn" style="background:#8e24aa;color:#fff;padding:12px 32px;font-size:1.1em;border-radius:10px;box-shadow:0 2px 8px #0001;margin-bottom:18px;">Importer les GameSessions Legacy</button>
+    <div id="import-legacy-gamesessions-result" style="margin-bottom:24px;"></div>
+    <script>
+    document.getElementById('import-legacy-gamesessions-btn').onclick = function(e) {
+        e.preventDefault();
+        const resultDiv = document.getElementById('import-legacy-gamesessions-result');
+        resultDiv.innerHTML = '<span style="color:#8e24aa">Import en cours...</span>';
+        fetch('/legacy/import_legacy_gamesessions/', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+        }).then(function(r) { return r.json(); }).then(function(data) {
+            resultDiv.innerHTML = data.success ? '<span style="color:green">'+data.message+'</span>' : '<span style="color:red">'+(data.message||data.error)+'</span>';
+        });
+    };
+    </script>
+</div>
+{% endblock %}

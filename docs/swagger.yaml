@@ -1,0 +1,242 @@
+openapi: 3.0.3
+info:
+  title: gdc-storm API
+  version: 1.0.0
+  description: |
+    API REST pour la gestion des sessions de jeu, joueurs et missions Arma 3.
+    
+    Toutes les routes nécessitent un token d'API dans l'en-tête `Authorization`.
+servers:
+  - url: http://localhost:8000/api
+security:
+  - ApiToken: []
+components:
+  securitySchemes:
+    ApiToken:
+      type: apiKey
+      in: header
+      name: Authorization
+  schemas:
+    GameSession:
+      type: object
+      properties:
+        id:
+          type: integer
+        mission:
+          type: integer
+          nullable: true
+        name:
+          type: string
+        map:
+          type: string
+        version:
+          type: string
+        start_time:
+          type: string
+          format: date-time
+        end_time:
+          type: string
+          format: date-time
+          nullable: true
+    Player:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+    GameSessionPlayer:
+      type: object
+      properties:
+        id:
+          type: integer
+        session:
+          type: integer
+        player:
+          type: integer
+        role:
+          type: string
+        status:
+          type: string
+          enum: [VIVANT, MORT]
+paths:
+  /gamesessions/:
+    post:
+      summary: Créer une nouvelle session de jeu
+      security:
+        - ApiToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                mission_name:
+                  type: string
+                map:
+                  type: string
+                start_time:
+                  type: number
+              required: [mission_name, map, start_time]
+      responses:
+        '200':
+          description: Session créée
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  session_id:
+                    type: integer
+                  mission_found:
+                    type: boolean
+        '400':
+          description: Erreur de validation
+  /gamesessions/{session_id}/end/:
+    post:
+      summary: Mettre à jour la fin d'une session de jeu
+      security:
+        - ApiToken: []
+      parameters:
+        - in: path
+          name: session_id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                end_time:
+                  type: number
+              required: [end_time]
+      responses:
+        '200':
+          description: Fin de session mise à jour
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+        '400':
+          description: Erreur de validation
+        '404':
+          description: Session introuvable
+  /gamesessions/{session_id}/add_player/:
+    post:
+      summary: Ajouter un joueur à une session
+      security:
+        - ApiToken: []
+      parameters:
+        - in: path
+          name: session_id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                player_name:
+                  type: string
+                role:
+                  type: string
+              required: [player_name, role]
+      responses:
+        '200':
+          description: Joueur ajouté
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  player_id:
+                    type: integer
+                  player_db_id:
+                    type: integer
+        '400':
+          description: Erreur de validation
+        '404':
+          description: Session introuvable
+  /gamesessions/{session_id}/update_player_status/:
+    post:
+      summary: Mettre à jour le statut d'un joueur dans une session
+      security:
+        - ApiToken: []
+      parameters:
+        - in: path
+          name: session_id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                player_name:
+                  type: string
+                status:
+                  type: string
+                  enum: [VIVANT, MORT]
+              required: [player_name, status]
+      responses:
+        '200':
+          description: Statut mis à jour
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+        '400':
+          description: Erreur de validation
+        '404':
+          description: Joueur ou GameSessionPlayer introuvable
+  /players/:
+    post:
+      summary: Créer un joueur
+      security:
+        - ApiToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+              required: [name]
+      responses:
+        '200':
+          description: Joueur créé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  player_id:
+                    type: integer
+        '400':
+          description: Erreur de validation
+        '409':
+          description: Joueur déjà existant

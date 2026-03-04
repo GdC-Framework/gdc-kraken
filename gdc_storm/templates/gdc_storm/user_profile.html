@@ -1,0 +1,296 @@
+{% extends 'gdc_storm/base.html' %}
+{% load dict_extras %}
+{% block title %}Profil utilisateur{% endblock %}
+{% block content %}
+{% if messages %}
+    <div class="message-block">
+        {% for message in messages %}
+            <div class="message-{{ message.tags|default:'info' }}">{{ message }}</div>
+        {% endfor %}
+    </div>
+{% endif %}
+<div class="user-profile-container" style="max-width:1500px;margin:40px auto 0 auto;padding:32px 32px 24px 32px;border-radius:18px;background:#fff;box-shadow:0 2px 16px #0002;">
+    <div class="user-profile-header" style="display:flex;align-items:center;gap:24px;margin-bottom:24px;">
+        <div class="user-avatar" style="width:72px;height:72px;border-radius:50%;background:#FFD600;color:#222;display:flex;align-items:center;justify-content:center;font-size:2.5em;font-weight:700;box-shadow:0 2px 8px #0001;">
+            {{ user_profile.username|slice:":1"|upper }}
+        </div>
+        <div>
+            <h2 style="margin:0 0 6px 0;font-size:2em;font-weight:700;">{{ user_profile.username }}</h2>
+            <span class="user-role-badge" style="background:#222;color:#FFD600;padding:4px 16px;border-radius:12px;font-size:1.1em;font-weight:600;">{{ user_role }}</span>
+        </div>
+    </div>
+    <div class="user-info-block" style="margin-bottom:32px;">
+        <ul class="user-info" style="list-style:none;padding:0;margin:0;">
+            <li><strong>Nom d'utilisateur :</strong> {{ user_profile.username }}</li>
+            <li><strong>Rôle :</strong> {{ user_role }}</li>
+            <li><strong>Players associés :</strong>
+                {% if user_profile.players.all %}
+                    {% for player in user_profile.players.all %}
+                        <a href="{% url 'player_detail' player.id %}" style="color:#222;font-weight:600;text-decoration:underline;">{{ player.name }}</a>{% if not forloop.last %}, {% endif %}
+                    {% empty %}-{% endfor %}
+                {% else %}-{% endif %}
+            </li>
+            <li><strong>Date de création :</strong> {% if oldest_player_created %}{{ oldest_player_created|date:'d/m/Y H:i' }}{% else %}—{% endif %}</li>
+            <li><strong>Missions jouées :</strong> {{ total_sessions_played }}</li>
+            <li><strong>Missions publiées :</strong> {{ total_missions_published }}</li>
+        </ul>
+    </div>
+    <div class="user-tabs" style="margin-bottom:24px;">
+        <div style="display:flex;gap:0;">
+            <button id="tab-played" class="tab-btn" style="flex:1 1 0;padding:10px 0;font-weight:700;font-size:1.08em;background:#1976d2;color:#fff;border:none;border-radius:8px 8px 0 0;cursor:pointer;">Missions jouées</button>
+            <button id="tab-pub" class="tab-btn" style="flex:1 1 0;padding:10px 0;font-weight:700;font-size:1.08em;background:#eee;color:#1976d2;border:none;border-radius:8px 8px 0 0;cursor:pointer;">Missions publiées</button>
+        </div>
+        <div id="tab-content-played" class="tab-content" style="background:#fff;border-radius:0 0 8px 8px;padding:24px 18px 18px 18px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+                <h3 style="margin:0;font-size:1.3em;font-weight:600;">Missions jouées</h3>
+                <button id="toggle-filters-played" onclick="toggleFiltersPlayed()" class="home-btn" style="background:#1976d2;color:#fff;padding:7px 22px;font-size:1em;margin-left:18px;box-shadow:0 2px 8px #0001;border-radius:8px;">Filtres</button>
+            </div>
+            {% if sessions_data %}
+                <table style="width:100%;table-layout:auto;">
+                    <thead style="vertical-align:top;">
+                        <tr>
+                            <th style="white-space:nowrap;vertical-align:top;">
+                                <a href="?sort=nom&order={% if sort == 'nom' and order == 'asc' %}desc{% else %}asc{% endif %}" style="text-decoration:none;color:inherit;">
+                                    Nom
+                                    {% if sort == 'nom' %}
+                                        {% if order == 'asc' %}<span style="color:#222;">▲</span>{% else %}<span style="color:#222;">▼</span>{% endif %}
+                                    {% else %}
+                                        <span style="color:#bbb;">▲</span>
+                                    {% endif %}
+                                </a><br><input type="text" id="filter-nom" class="filter-input" value="{{ filter_nom }}" style="width:90%;font-size:0.95em;display:none;margin-top:4px;" placeholder="Filtrer..." onkeyup="filterTablePlayed()">
+                            </th>
+                            <th style="white-space:nowrap;vertical-align:top;">
+                                <a href="?sort=carte&order={% if sort == 'carte' and order == 'asc' %}desc{% else %}asc{% endif %}" style="text-decoration:none;color:inherit;">
+                                    Carte
+                                    {% if sort == 'carte' %}
+                                        {% if order == 'asc' %}<span style="color:#222;">▲</span>{% else %}<span style="color:#222;">▼</span>{% endif %}
+                                    {% else %}
+                                        <span style="color:#bbb;">▲</span>
+                                    {% endif %}
+                                </a><br><input type="text" id="filter-carte" class="filter-input" value="{{ filter_carte }}" style="width:90%;font-size:0.95em;display:none;margin-top:4px;" placeholder="Filtrer..." onkeyup="filterTablePlayed()">
+                            </th>
+                            <th style="white-space:nowrap;vertical-align:top;">
+                                <a href="?sort=date&order={% if sort == 'date' and order == 'asc' %}desc{% else %}asc{% endif %}" style="text-decoration:none;color:inherit;">
+                                    Date
+                                    {% if sort == 'date' %}
+                                        {% if order == 'asc' %}<span style="color:#222;">▲</span>{% else %}<span style="color:#222;">▼</span>{% endif %}
+                                    {% else %}
+                                        <span style="color:#bbb;">▲</span>
+                                    {% endif %}
+                                </a>
+                            </th>
+                            <th style="white-space:nowrap;vertical-align:top;">
+                                <a href="?sort=duration&order={% if sort == 'duration' and order == 'asc' %}desc{% else %}asc{% endif %}" style="text-decoration:none;color:inherit;">
+                                    Durée
+                                    {% if sort == 'duration' %}
+                                        {% if order == 'asc' %}<span style="color:#222;">▲</span>{% else %}<span style="color:#222;">▼</span>{% endif %}
+                                    {% else %}
+                                        <span style="color:#bbb;">▲</span>
+                                    {% endif %}
+                                </a>
+                            </th>
+                            <th style="white-space:nowrap;vertical-align:top;">
+                                <a href="?sort=verdict&order={% if sort == 'verdict' and order == 'asc' %}desc{% else %}asc{% endif %}" style="text-decoration:none;color:inherit;">
+                                    Verdict
+                                    {% if sort == 'verdict' %}
+                                        {% if order == 'asc' %}<span style="color:#222;">▲</span>{% else %}<span style="color:#222;">▼</span>{% endif %}
+                                    {% else %}
+                                        <span style="color:#bbb;">▲</span>
+                                    {% endif %}
+                                </a><br><input type="text" id="filter-verdict" class="filter-input" value="{{ filter_verdict }}" style="width:90%;font-size:0.95em;display:none;margin-top:4px;" placeholder="Filtrer..." onkeyup="filterTablePlayed()">
+                            </th>
+                            <th>Joueurs</th>
+                            <th>Survivants</th>
+                            <th>Status joueur</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sessions-table-body">
+                    {% for s in sessions_data %}
+                        <tr class="session-row-{% if s.session.verdict == 'SUCCES' %}succes{% elif s.session.verdict == 'ECHEC' %}echec{% elif s.session.verdict == 'PVP' %}pvp{% elif s.session.verdict == 'TRAINING' %}training{% else %}indeterminee{% endif %}" style="white-space:nowrap;overflow-x:auto;">
+                            <td style="max-width:300px;overflow-x:auto;">
+                                <a href="{% url 'session_detail' s.session.id %}" style="color:#1976d2;font-weight:600;text-decoration:underline;">{{ s.session.name }}</a>
+                            </td>
+                            <td>
+                                {% if s.session.mission %}{{ user_sessions_map_displays|get_item:s.session.mission.id }}{% else %}{{ user_sessions_map_displays|get_item:s.session.id }}{% endif %}
+                            </td>
+                            <td>{{ s.session.start_time|date:'d/m/Y H:i' }}</td>
+                            <td>{% if s.duration_min is not None %}{{ s.duration_min }}{% else %}—{% endif %}</td>
+                            <td>{{ s.session.get_verdict_display }}</td>
+                            <td>{{ s.players_count }}</td>
+                            <td>{{ s.vivant_count }}</td>
+                            <td>
+                                {% with status=user_status_by_session_id|get_item:s.session.id %}
+                                    {% if status == 'VIVANT' %}<span style="color:#43a047;font-weight:600;">Vivant</span>{% elif status == 'MORT' %}<span style="color:#e53935;font-weight:600;">Mort</span>{% else %}—{% endif %}
+                                {% endwith %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <div class="empty-msg" style="color:#888;font-size:1.1em;text-align:center;margin:32px 0;">Aucune mission jouée.</div>
+            {% endif %}
+        </div>
+        <div id="tab-content-pub" class="tab-content" style="display:none;background:#fff;border-radius:0 0 8px 8px;padding:24px 18px 18px 18px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+                <h3 style="margin:0;font-size:1.3em;font-weight:600;">Missions publiées</h3>
+                <button id="toggle-filters-pub" onclick="toggleFiltersPub()" class="home-btn" style="background:#1976d2;color:#fff;padding:7px 22px;font-size:1em;margin-left:18px;box-shadow:0 2px 8px #0001;border-radius:8px;">Filtres</button>
+            </div>
+            {% if missions %}
+                <table style="width:100%;table-layout:auto;">
+                    <thead style="vertical-align:top;">
+                        <tr>
+                            <th>Type</th>
+                            <th style="white-space:nowrap;vertical-align:top;">
+                                <a href="?tab=pub&sort_pub=nom&order_pub={% if sort_pub == 'nom' and order_pub == 'asc' %}desc{% else %}asc{% endif %}" style="text-decoration:none;color:inherit;">
+                                    Nom
+                                    {% if sort_pub == 'nom' %}
+                                        {% if order_pub == 'asc' %}<span style="color:#222;">▲</span>{% else %}<span style="color:#222;">▼</span>{% endif %}
+                                    {% else %}
+                                        <span style="color:#bbb;">▲</span>
+                                    {% endif %}
+                                </a><br><input type="text" id="filter-pub-nom" class="filter-input" value="{{ filter_pub_nom }}" style="width:90%;font-size:0.95em;display:none;margin-top:4px;" placeholder="Filtrer..." onkeyup="filterTablePub()">
+                            </th>
+                            <th style="white-space:nowrap;vertical-align:top;">
+                                <a href="?tab=pub&sort_pub=carte&order_pub={% if sort_pub == 'carte' and order_pub == 'asc' %}desc{% else %}asc{% endif %}" style="text-decoration:none;color:inherit;">
+                                    Carte
+                                    {% if sort_pub == 'carte' %}
+                                        {% if order_pub == 'asc' %}<span style="color:#222;">▲</span>{% else %}<span style="color:#222;">▼</span>{% endif %}
+                                    {% else %}
+                                        <span style="color:#bbb;">▲</span>
+                                    {% endif %}
+                                </a><br><input type="text" id="filter-pub-carte" class="filter-input" value="{{ filter_pub_carte }}" style="width:90%;font-size:0.95em;display:none;margin-top:4px;" placeholder="Filtrer..." onkeyup="filterTablePub()">
+                            </th>
+                            <th>Auteur(s)</th>
+                            <th>Version</th>
+                            <th style="white-space:nowrap;vertical-align:top;">
+                                <a href="?tab=pub&sort_pub=date&order_pub={% if sort_pub == 'date' and order_pub == 'asc' %}desc{% else %}asc{% endif %}" style="text-decoration:none;color:inherit;">
+                                    Date
+                                    {% if sort_pub == 'date' %}
+                                        {% if order_pub == 'asc' %}<span style="color:#222;">▲</span>{% else %}<span style="color:#222;">▼</span>{% endif %}
+                                    {% else %}
+                                        <span style="color:#bbb;">▲</span>
+                                    {% endif %}
+                                </a>
+                            </th>
+                            <th style="white-space:nowrap;vertical-align:top;">
+                                <a href="?tab=pub&sort_pub=statut&order_pub={% if sort_pub == 'statut' and order_pub == 'asc' %}desc{% else %}asc{% endif %}" style="text-decoration:none;color:inherit;">
+                                    Statut
+                                    {% if sort_pub == 'statut' %}
+                                        {% if order_pub == 'asc' %}<span style="color:#222;">▲</span>{% else %}<span style="color:#222;">▼</span>{% endif %}
+                                    {% else %}
+                                        <span style="color:#bbb;">▲</span>
+                                    {% endif %}
+                                </a>
+                            </th>
+                            <th>Min</th>
+                            <th>Max</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for mission in missions %}
+                        <tr class="{% if mission.status == 'JOUABLE' %}mission-row-jouable{% elif mission.status == 'NON_JOUABLE' %}mission-row-non-jouable{% elif mission.status == 'INCONNU' %}mission-row-inconnu{% elif mission.status == 'SUPPRIMEE' %}mission-row-supprimee{% endif %}">
+                            <td>{{ mission.get_type_display }}</td>
+                            <td style="white-space:nowrap;overflow-x:auto;max-width:300px;">
+                                <a href="{% url 'mission_detail' mission.id %}" style="color:#1976d2;font-weight:600;text-decoration:underline;">{{ mission.name }}</a>
+                            </td>
+                            <td>{{ map_displays|get_item:mission.id }}</td>
+                            <td>{{ mission.authors }}</td>
+                            <td>{{ mission.version }}</td>
+                            <td>{{ mission.publication_date|date:'d/m/Y' }}</td>
+                            <td>{{ mission.get_status_display }}</td>
+                            <td>{% if mission.min_players %}{{ mission.min_players }}{% else %}-{% endif %}</td>
+                            <td>{{ mission.max_players }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <div class="empty-msg" style="color:#888;font-size:1.1em;text-align:center;margin:32px 0;">Aucune mission publiée.</div>
+            {% endif %}
+        </div>
+    </div>
+    <script>
+    function setupUserTabs() {
+        var tabPub = document.getElementById('tab-pub');
+        var tabPlayed = document.getElementById('tab-played');
+        var contentPub = document.getElementById('tab-content-pub');
+        var contentPlayed = document.getElementById('tab-content-played');
+        // Onglet par défaut selon l'URL
+        var urlParams = new URLSearchParams(window.location.search);
+        var tab = urlParams.get('tab') || 'played';
+        if(tab === 'pub') {
+            tabPub.style.background = '#1976d2';
+            tabPub.style.color = '#fff';
+            tabPlayed.style.background = '#eee';
+            tabPlayed.style.color = '#1976d2';
+            contentPub.style.display = '';
+            contentPlayed.style.display = 'none';
+        } else {
+            tabPlayed.style.background = '#1976d2';
+            tabPlayed.style.color = '#fff';
+            tabPub.style.background = '#eee';
+            tabPub.style.color = '#1976d2';
+            contentPlayed.style.display = '';
+            contentPub.style.display = 'none';
+        }
+        tabPlayed.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            urlParams.set('tab', 'played');
+            window.location.search = urlParams.toString();
+        });
+        tabPub.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            urlParams.set('tab', 'pub');
+            window.location.search = urlParams.toString();
+        });
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupUserTabs);
+    } else {
+        setupUserTabs();
+    }
+    function toggleFiltersPlayed() {
+        const filters = document.querySelectorAll('#tab-content-played .filter-input');
+        filters.forEach(input => input.style.display = input.style.display === 'none' ? '' : 'none');
+        if (filters.length > 0 && filters[0].style.display !== 'none') filters[0].focus();
+    }
+    function filterTablePlayed() {
+        const nom = document.getElementById('filter-nom').value.toLowerCase();
+        const carte = document.getElementById('filter-carte').value.toLowerCase();
+        const verdict = document.getElementById('filter-verdict').value.toLowerCase();
+        const rows = document.querySelectorAll('#tab-content-played #sessions-table-body tr');
+        rows.forEach(row => {
+            const tds = row.querySelectorAll('td');
+            const nomVal = tds[0].innerText.toLowerCase();
+            const carteVal = tds[1].innerText.toLowerCase();
+            const verdictVal = tds[4].innerText.toLowerCase();
+            let show = true;
+            if(nom && !nomVal.includes(nom)) show = false;
+            if(carte && !carteVal.includes(carte)) show = false;
+            if(verdict && !verdictVal.includes(verdict)) show = false;
+            row.style.display = show ? '' : 'none';
+        });
+    }
+    function toggleFiltersPub() {
+        const filters = document.querySelectorAll('#tab-content-pub .filter-input');
+        filters.forEach(input => input.style.display = input.style.display === 'none' ? '' : 'none');
+        if (filters.length > 0 && filters[0].style.display !== 'none') filters[0].focus();
+    }
+    function filterTablePub() {
+        const nom = document.getElementById('filter-pub-nom').value.toLowerCase();
+        const carte = document.getElementById('filter-pub-carte').value.toLowerCase();
+        const rows = document.querySelectorAll('#tab-content-pub table tbody tr');
+        rows.forEach(row => {
+            const tds = row.querySelectorAll('td');
+            const nomVal = tds[1].innerText.toLowerCase();
+            const carteVal = tds[2].innerText.toLowerCase();
+            let show = true;
+            if(nom && !nomVal.includes(nom)) show = false;
+            if(carte && !carteVal.includes(carte)) show = false;
+            row.style.display = show ? '' : 'none';
+        });
+    }
+    </script>
+</div>
+{% endblock %}

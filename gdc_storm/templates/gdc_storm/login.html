@@ -1,0 +1,22 @@
+{% extends 'gdc_storm/base.html' %}
+{% block title %}Connexion - GDC Storm{% endblock %}
+{% block content %}
+<div class="missions-container" style="max-width:400px;margin:40px auto 0 auto;padding:32px;border-radius:18px;background:#fff;box-shadow:0 2px 16px #0002;">
+    <div class="missions-title">Connexion</div>
+    <form method="post">
+        {% csrf_token %}
+        <div style="margin-bottom:18px;">
+            <label for="id_username">Nom d'utilisateur</label><br>
+            <input type="text" name="username" autofocus required id="id_username" style="width:100%;padding:8px;margin-top:4px;">
+        </div>
+        <div style="margin-bottom:18px;">
+            <label for="id_password">Mot de passe</label><br>
+            <input type="password" name="password" required id="id_password" style="width:100%;padding:8px;margin-top:4px;">
+        </div>
+        <button type="submit" class="home-btn" style="background:#FFD600;color:#111;width:100%;">Se connecter</button>
+    </form>
+    {% if form.errors %}
+        <div style="color:#e53935;margin-top:18px;text-align:center;">Nom d'utilisateur ou mot de passe incorrect.</div>
+    {% endif %}
+</div>
+{% endblock %}

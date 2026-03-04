@@ -1,0 +1,109 @@
+{% extends 'gdc_storm/base.html' %}
+{% load dict_extras %}
+{% block title %}Liste des joueurs - GDC Storm{% endblock %}
+{% block content %}
+{% if messages %}
+    <div class="message-block">
+        {% for message in messages %}
+            <div class="message-{{ message.tags|default:'info' }}">{{ message }}</div>
+        {% endfor %}
+    </div>
+{% endif %}
+<div class="missions-container" style="max-width:1500px;margin:35px auto 0 auto;padding:0 32px 32px 32px;border-radius:18px;background:#fff;box-shadow:0 2px 16px #0002;">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div class="missions-title" style="font-size:2.1em;font-weight:700;margin-top:12px;">Liste des joueurs</div>
+        <button id="toggle-filters" onclick="toggleFilters()" class="home-btn" style="background:#1976d2;color:#fff;padding:7px 22px;font-size:1em;margin-right:8px;box-shadow:0 2px 8px #0001;border-radius:8px;">Filtres</button>
+    </div>
+    {% if players %}
+    <table style="width:100%;table-layout:auto;">
+        <thead>
+            <tr>
+                <th style="white-space:nowrap;vertical-align:top;">
+                    <a href="#" onclick="setSort('nom');return false;" style="text-decoration:none;color:inherit;">
+                        Nom
+                        {% if sort == 'nom' %}
+                            {% if order == 'asc' %}<span style="color:#222;">▲</span>{% else %}<span style="color:#222;">▼</span>{% endif %}
+                        {% else %}
+                            <span style="color:#bbb;">▲</span>
+                        {% endif %}
+                    </a><br><input type="text" id="filter-nom" class="filter-input" style="width:90%;font-size:0.95em;display:none;margin-top:4px;" placeholder="Filtrer..." onkeyup="filterTable()">
+                </th>
+                <th style="white-space:nowrap;vertical-align:top;">
+                    <a href="#" onclick="setSort('date');return false;" style="text-decoration:none;color:inherit;">
+                        Date de création
+                        {% if sort == 'date' %}
+                            {% if order == 'asc' %}<span style="color:#222;">▲</span>{% else %}<span style="color:#222;">▼</span>{% endif %}
+                        {% else %}
+                            <span style="color:#bbb;">▲</span>
+                        {% endif %}
+                    </a>
+                </th>
+                <th style="white-space:nowrap;vertical-align:top;">
+                    <a href="#" onclick="setSort('missions');return false;" style="text-decoration:none;color:inherit;">
+                        Missions jouées
+                        {% if sort == 'missions' %}
+                            {% if order == 'asc' %}<span style="color:#222;">▲</span>{% else %}<span style="color:#222;">▼</span>{% endif %}
+                        {% else %}
+                            <span style="color:#bbb;">▲</span>
+                        {% endif %}
+                    </a>
+                </th>
+                <th style="white-space:nowrap;vertical-align:top;">
+                    <a href="#" onclick="setSort('last');return false;" style="text-decoration:none;color:inherit;">
+                        Date dernière mission
+                        {% if sort == 'last' %}
+                            {% if order == 'asc' %}<span style="color:#222;">▲</span>{% else %}<span style="color:#222;">▼</span>{% endif %}
+                        {% else %}
+                            <span style="color:#bbb;">▲</span>
+                        {% endif %}
+                    </a>
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for player in players %}
+            <tr class="{% cycle 'map-row-even' 'map-row-odd' %}">
+                <td><a href="{% url 'player_detail' player.id %}" style="color:#222;font-weight:600;text-decoration:underline;">{{ player.name }}</a></td>
+                <td>{{ player.created_at|date:'d/m/Y H:i' }}</td>
+                <td>{{ player_sessions_count|get_item:player.id|default:'0' }}</td>
+                <td>{% if player_last_session|get_item:player.id %}{{ player_last_session|get_item:player.id|date:'d/m/Y H:i' }}{% else %}—{% endif %}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+        <div class="empty-msg">Aucun joueur enregistré pour le moment.</div>
+    {% endif %}
+</div>
+<script>
+function toggleFilters() {
+    var inputs = document.querySelectorAll('.filter-input');
+    for (var i = 0; i < inputs.length; i++) {
+        inputs[i].style.display = (inputs[i].style.display === 'none' || inputs[i].style.display === '') ? 'block' : 'none';
+    }
+}
+function setSort(field) {
+    var url = new URL(window.location.href);
+    var currentSort = url.searchParams.get('sort');
+    var currentOrder = url.searchParams.get('order');
+    if (currentSort === field) {
+        url.searchParams.set('order', currentOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+        url.searchParams.set('sort', field);
+        url.searchParams.set('order', 'desc');
+    }
+    window.location.href = url.toString();
+}
+function filterTable() {
+    var nom = document.getElementById('filter-nom').value.toLowerCase();
+    var table = document.querySelector('table');
+    var trs = table.querySelectorAll('tbody tr');
+    trs.forEach(function(tr) {
+        var tdNom = tr.children[0].textContent.toLowerCase();
+        var show = true;
+        if (nom && !tdNom.includes(nom)) show = false;
+        tr.style.display = show ? '' : 'none';
+    });
+}
+</script>
+{% endblock %}

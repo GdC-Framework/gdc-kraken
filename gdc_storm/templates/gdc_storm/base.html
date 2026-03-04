@@ -1,0 +1,71 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}GDC Storm{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="{% static 'gdc_storm/style.css' %}">
+    <link rel="icon" type="image/x-icon" href="{% static 'gdc_storm/favicon.ico' %}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <div class="navbar">
+        <div class="nav">
+            <a href="/">Home</a>
+            <a href="/missions/">Missions</a>
+            <a href="/sessions/">Sessions</a>
+            <a href="/maps/">Cartes</a>
+            <a href="/players/">Joueurs</a>
+            {% if user.is_superuser %}
+            <a href="/legacy/" style="color:#FFD600;font-weight:700;">LegacyExport</a>
+            {% endif %}
+        </div>
+        <div class="nav-user" style="position:absolute;right:32px;top:18px;">
+            {% if user.is_authenticated %}
+                <a href="/users/{{ user.id }}/" style="color:#FFD600;font-weight:600;margin-right:12px;text-decoration:underline;">{{ user.username }}</a>
+                <!-- MENU UTILISATEUR -->
+                <div style="display:inline-block;position:relative;">
+                    <button id="user-menu-btn" style="background:none;border:none;padding:0;margin:0;cursor:pointer;vertical-align:middle;">
+                        <span style="display:block;width:32px;height:32px;position:relative;">
+                            <span style="display:block;width:24px;height:3px;background:#FFD600;border-radius:2px;position:absolute;left:4px;top:8px;"></span>
+                            <span style="display:block;width:24px;height:3px;background:#FFD600;border-radius:2px;position:absolute;left:4px;top:15px;"></span>
+                            <span style="display:block;width:24px;height:3px;background:#FFD600;border-radius:2px;position:absolute;left:4px;top:22px;"></span>
+                        </span>
+                    </button>
+                    <div id="user-menu-dropdown" style="display:none;position:absolute;right:0;top:40px;background:#fff;border:2px solid #FFD600;border-radius:10px;box-shadow:0 2px 16px #0004;padding:12px 0;z-index:1002;min-width:180px;">
+                        <button id="player-mapping-btn" onclick="window.location.href='/player-mapping/';return false;" style="width:100%;background:none;color:#222;padding:10px 18px;border:none;text-align:left;font-size:1em;cursor:pointer;">PlayerMapping</button>
+                        <button id="orphan-sessions-btn" onclick="window.location.href='/sessions/orphelines/';return false;" style="width:100%;background:none;color:#222;padding:10px 18px;border:none;text-align:left;font-size:1em;cursor:pointer;">Sessions Orphelines</button>
+                        <button id="change-password-btn" onclick="window.location.href='/changer-mot-de-passe/';return false;" style="width:100%;background:none;color:#222;padding:10px 18px;border:none;text-align:left;font-size:1em;cursor:pointer;">Changer mot de passe</button>
+                        <form method="post" action="/logout-post/" style="margin:0;">
+                            {% csrf_token %}
+                            <button type="submit" class="home-btn" style="width:100%;background:#FFD600;color:#111;padding:10px 18px;border:none;text-align:left;font-size:1em;border-radius:0 0 10px 10px;">Déconnexion</button>
+                        </form>
+                    </div>
+                </div>
+                <script>
+                const userMenuBtn = document.getElementById('user-menu-btn');
+                const userMenuDropdown = document.getElementById('user-menu-dropdown');
+                userMenuBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    userMenuDropdown.style.display = userMenuDropdown.style.display === 'none' ? 'block' : 'none';
+                };
+                document.addEventListener('click', function(e) {
+                    if (!userMenuDropdown.contains(e.target) && e.target !== userMenuBtn) {
+                        userMenuDropdown.style.display = 'none';
+                    }
+                });
+                </script>
+            {% else %}
+                <a href="/login/" class="home-btn" style="background:#FFD600;color:#111;padding:6px 16px;font-size:1em;">Connexion</a>
+            {% endif %}
+        </div>
+    </div>
+    <div class="content">
+        {% block content %}{% endblock %}
+    </div>
+    <footer>
+        &copy; 2025 Grèce de Canards - GDC Storm
+    </footer>
+</body>
+</html>

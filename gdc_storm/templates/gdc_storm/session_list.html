@@ -1,0 +1,185 @@
+{% extends 'gdc_storm/base.html' %}
+{% load dict_extras %}
+{% block title %}Liste des sessions - GDC Storm{% endblock %}
+{% block content %}
+<div class="missions-container" style="max-width:1500px;margin:35px auto 0 auto;padding:0 32px 32px 32px;border-radius:18px;background:#fff;box-shadow:0 2px 16px #0002;">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div class="missions-title" style="font-size:2.1em;font-weight:700;margin-top:12px;">Liste des sessions</div>
+        <button id="toggle-filters" onclick="toggleFilters()" class="home-btn" style="background:#1976d2;color:#fff;padding:7px 22px;font-size:1em;margin-right:8px;box-shadow:0 2px 8px #0001;border-radius:8px;">Filtres</button>
+    </div>
+    {% if messages %}
+        {% for message in messages %}
+            <div style="background:#d4edda;color:#155724;padding:12px 18px;border-radius:6px;margin-bottom:18px;text-align:center;font-weight:600;">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+    {% if sessions_data %}
+    <table style="width:100%;table-layout:auto;">
+        <thead style="vertical-align:top;">
+            <tr>
+                <th style="white-space:nowrap;vertical-align:top;">
+                    <a href="#" onclick="setSort('nom');return false;" style="text-decoration:none;color:inherit;">
+                        Nom
+                        {% if sort == 'nom' %}
+                            {% if order == 'asc' %}<span style="color:#222;">▲</span>{% else %}<span style="color:#222;">▼</span>{% endif %}
+                        {% else %}
+                            <span style="color:#bbb;">▲</span>
+                        {% endif %}
+                    </a><br><input type="text" id="filter-nom" class="filter-input" style="width:90%;font-size:0.95em;display:none;margin-top:4px;" placeholder="Filtrer..." onkeyup="filterTable()">
+                </th>
+                <th style="white-space:nowrap;vertical-align:top;">
+                    <a href="#" onclick="setSort('carte');return false;" style="text-decoration:none;color:inherit;">
+                        Carte
+                        {% if sort == 'carte' %}
+                            {% if order == 'asc' %}<span style="color:#222;">▲</span>{% else %}<span style="color:#222;">▼</span>{% endif %}
+                        {% else %}
+                            <span style="color:#bbb;">▲</span>
+                        {% endif %}
+                    </a><br><input type="text" id="filter-carte" class="filter-input" style="width:90%;font-size:0.95em;display:none;margin-top:4px;" placeholder="Filtrer..." onkeyup="filterTable()">
+                </th>
+                <th style="white-space:nowrap;vertical-align:top;">
+                    <a href="#" onclick="setSort('date');return false;" style="text-decoration:none;color:inherit;">
+                        Date
+                        {% if sort == 'date' %}
+                            {% if order == 'asc' %}<span style="color:#222;">▲</span>{% else %}<span style="color:#222;">▼</span>{% endif %}
+                        {% else %}
+                            <span style="color:#bbb;">▲</span>
+                        {% endif %}
+                    </a>
+                </th>
+                <th style="white-space:nowrap;vertical-align:top;">
+                    <a href="#" onclick="setSort('duration');return false;" style="text-decoration:none;color:inherit;">
+                        Durée
+                        {% if sort == 'duration' %}
+                            {% if order == 'asc' %}<span style="color:#222;">▲</span>{% else %}<span style="color:#222;">▼</span>{% endif %}
+                        {% else %}
+                            <span style="color:#bbb;">▲</span>
+                        {% endif %}
+                    </a>
+                </th>
+                <th style="white-space:nowrap;vertical-align:top;">
+                    <a href="#" onclick="setSort('verdict');return false;" style="text-decoration:none;color:inherit;">
+                        Verdict
+                        {% if sort == 'verdict' %}
+                            {% if order == 'asc' %}<span style="color:#222;">▲</span>{% else %}<span style="color:#222;">▼</span>{% endif %}
+                        {% else %}
+                            <span style="color:#bbb;">▲</span>
+                        {% endif %}
+                    </a><br><input type="text" id="filter-verdict" class="filter-input" style="width:90%;font-size:0.95em;display:none;margin-top:4px;" placeholder="Filtrer..." onkeyup="filterTable()">
+                </th>
+                <th style="white-space:nowrap;vertical-align:top;">
+                    Joueurs
+                </th>
+                <th style="white-space:nowrap;vertical-align:top;">
+                    Survivants
+                </th>
+            </tr>
+        </thead>
+        <tbody id="sessions-table-body">
+    {% for s in sessions_data %}
+        <tr class="session-row-{% if s.verdict == 'SUCCES' %}succes{% elif s.verdict == 'ECHEC' %}echec{% elif s.verdict|upper == 'PVP' %}pvp{% elif s.verdict == 'TRAINING' %}training{% else %}indeterminee{% endif %}" style="white-space:nowrap;overflow-x:auto;">
+                <td style="max-width:300px;overflow-x:auto;">
+                    <a href="{% url 'session_detail' s.id %}" style="color:#1976d2;font-weight:600;text-decoration:underline;">{{ s.name }}</a>
+                </td>
+                <td>{{ map_displays|get_item:s.id }}</td>
+                <td>{{ s.start_time|date:'d/m/Y H:i' }}</td>
+                <td>{% if s.duration_min is not None %}{{ s.duration_min }}{% else %}—{% endif %}</td>
+                <td>
+                    {{ s.verdict_display }}
+                </td>
+                <td>{{ s.players_count }}</td>
+                <td>{{ s.vivant_count }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <script>
+    function toggleFilters() {
+        // Get current URL params
+        const params = new URLSearchParams(window.location.search);
+        const filters = document.querySelectorAll('.filter-input');
+        const filtersVisible = params.get('show_filters') === '1';
+        if (filtersVisible) {
+            // Hide filters: remove param and hide fields
+            params.delete('show_filters');
+            filters.forEach(input => input.style.display = 'none');
+        } else {
+            // Show filters: add param and show fields
+            params.set('show_filters', '1');
+            filters.forEach(input => input.style.display = '');
+            if (filters.length > 0) filters[0].focus();
+        }
+        // Update URL without reloading (for toggle only)
+        window.history.replaceState({}, '', `${window.location.pathname}?${params}`);
+    }
+    function filterTable() {
+        const nom = document.getElementById('filter-nom').value.toLowerCase();
+        const carte = document.getElementById('filter-carte').value.toLowerCase();
+        const verdict = document.getElementById('filter-verdict').value.toLowerCase();
+        const rows = document.querySelectorAll('#sessions-table-body tr');
+        rows.forEach(row => {
+            const tds = row.querySelectorAll('td');
+            const nomVal = tds[0].innerText.toLowerCase();
+            const carteVal = tds[1].innerText.toLowerCase();
+            const verdictVal = tds[4].innerText.toLowerCase();
+            let show = true;
+            if(nom && !nomVal.includes(nom)) show = false;
+            if(carte && !carteVal.includes(carte)) show = false;
+            if(verdict && !verdictVal.includes(verdict)) show = false;
+            row.style.display = show ? '' : 'none';
+        });
+    }
+    function setSort(col) {
+        // Récupère les filtres actifs
+        const filters = {
+            nom: document.getElementById('filter-nom').value,
+            carte: document.getElementById('filter-carte').value,
+            verdict: document.getElementById('filter-verdict').value
+        };
+        // Détermine l'order
+        let currentSort = '{{ sort|escapejs }}';
+        let currentOrder = '{{ order|escapejs }}';
+        let order = 'asc';
+        if (currentSort === col && currentOrder === 'asc') order = 'desc';
+        // Construit l'URL avec les filtres en query string
+        let url = `?sort=${col}&order=${order}`;
+        Object.keys(filters).forEach(key => {
+            if (filters[key]) {
+                url += `&filter_${key}=${encodeURIComponent(filters[key])}`;
+            }
+        });
+        // Preserve show_filters if visible
+        const filtersVisible = Array.from(document.querySelectorAll('.filter-input')).some(input => input.style.display !== 'none');
+        if (filtersVisible) {
+            url += '&show_filters=1';
+        }
+        window.location = url;
+    }
+    (function() {
+        const params = new URLSearchParams(window.location.search);
+        const filters = document.querySelectorAll('.filter-input');
+        let anyFilter = false;
+        ['nom','carte','verdict'].forEach(key => {
+            const val = params.get('filter_' + key);
+            if (val) {
+                document.getElementById('filter-' + key).value = val;
+                anyFilter = true;
+            }
+        });
+        // Afficher les champs filtres si show_filters=1, ou si un filtre est présent
+        if (params.get('show_filters') === '1' || anyFilter) {
+            filters.forEach(input => input.style.display = '');
+        } else {
+            filters.forEach(input => input.style.display = 'none');
+        }
+        if (anyFilter) {
+            filterTable();
+        }
+    })();
+    </script>
+    {% else %}
+        <div class="empty-msg">Aucune session enregistrée pour le moment.</div>
+    {% endif %}
+</div>
+{% endblock %}

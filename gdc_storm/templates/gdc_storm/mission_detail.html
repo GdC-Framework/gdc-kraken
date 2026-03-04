@@ -1,0 +1,207 @@
+{% extends 'gdc_storm/base.html' %}
+{% load static %}
+{% block title %}Détail de la mission - GDC Storm{% endblock %}
+{% block content %}
+{% if messages %}
+    <div class="message-block">
+        {% for message in messages %}
+            <div class="message-{{ message.tags|default:'info' }}">{{ message }}</div>
+        {% endfor %}
+    </div>
+{% endif %}
+<div class="missions-container" style="max-width:none;margin:10px 10px 10px 10px;padding:0 0 32px 0;border-radius:18px;background:#fff;box-shadow:0 2px 16px #0002;">
+    <!-- Bandeau titre + actions -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:32px 40px 24px 40px;background:#222;color:#fff;border-radius:18px 18px 0 0;">
+        <div style="font-size:2.1em;font-weight:800;letter-spacing:0.5px;">{{ mission.name }}</div>
+        <div style="display:flex;gap:16px;align-items:center;position:relative;">
+            {% if user.is_authenticated %}
+                {% if user.is_superuser or mission.user == user %}
+                    <button id="open-status-popup" class="home-btn" style="background:#1976d2;color:#fff;padding:8px 28px;font-size:1.08em;min-width:130px;">Statut</button>
+                    {% if mission.game_sessions.exists %}
+                        <div style="position:relative;display:inline-block;">
+                            <button type="button" class="home-btn" style="background:#ccc;color:#888;cursor:not-allowed;min-width:130px;padding:8px 28px;font-size:1.08em;" disabled
+                                onmouseenter="const tt=document.getElementById('delete-tooltip');tt.style.display='block';if(window.innerWidth-tt.getBoundingClientRect().right<30){tt.style.left='auto';tt.style.right='0';tt.style.transform='none';}else{tt.style.left='50%';tt.style.right='auto';tt.style.transform='translateX(-50%)';}"
+                                onmouseleave="const tt=document.getElementById('delete-tooltip');tt.style.display='none';">
+                                Supprimer
+                            </button>
+                            <div id="delete-tooltip" style="display:none;position:absolute;left:50%;transform:translateX(-50%);top:110%;background:#fff3cd;color:#856404;border:1px solid #ffeeba;padding:10px 18px;border-radius:6px;z-index:10;min-width:320px;max-width:400px;box-shadow:0 2px 8px #bbb;pointer-events:none;">
+                                Suppression impossible : cette mission a déjà été jouée et est liée à au moins une session.<br>Vous pouvez mettre son statut à "supprimée".
+                            </div>
+                        </div>
+                    {% else %}
+                        <form method="post" action="{% url 'delete_mission' mission.id %}" style="display:inline;" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette mission ?');">
+                            {% csrf_token %}
+                            <button type="submit" class="home-btn" style="background:#e53935;color:#fff;min-width:130px;padding:8px 28px;font-size:1.08em;">Supprimer</button>
+                        </form>
+                    {% endif %}
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+    {% if success %}
+        <div style="background:#d4edda;color:#155724;padding:12px 18px;border-radius:0 0 0 0;margin-bottom:18px;text-align:center;font-weight:600;">La mission a été publiée avec succès !</div>
+    {% endif %}
+    <!-- Popup statut -->
+    <div id="status-popup" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:#0007;z-index:2000;align-items:center;justify-content:center;">
+        <form method="post" id="status-form" style="background:#fff;padding:32px 32px 24px 32px;border-radius:12px;box-shadow:0 2px 24px #0006;min-width:320px;max-width:90vw;display:flex;flex-direction:column;gap:18px;">
+            {% csrf_token %}
+            <div style="font-size:1.2em;font-weight:700;margin-bottom:8px;">Modifier le statut de la mission</div>
+            {{ status_form.status }}
+            <div style="display:flex;gap:12px;justify-content:flex-end;">
+                <button type="button" id="cancel-status-popup" style="background:#eee;color:#222;padding:6px 18px;border-radius:6px;border:none;min-width:110px;">Annuler</button>
+                <button type="submit" name="update_status" class="home-btn" style="background:#1976d2;color:#fff;padding:6px 18px;border-radius:6px;border:none;font-weight:600;min-width:110px;">Mettre à jour</button>
+            </div>
+        </form>
+    </div>
+    <!-- Layout principal -->
+    <div style="display:flex;gap:2%;padding:40px 40px 40px 40px;">
+        <!-- Colonne gauche (infos) -->
+        <div style="flex:0 0 32.33333%;">
+            <div class="mission-loadscreen" style="margin-bottom:24px;text-align:center;">
+                {% if mission.loadScreen %}
+                    <img src="{{ mission.loadScreen.url }}" alt="loadScreen" style="width:100%;height:auto;display:block;">
+                {% else %}
+                    <img src="{% static 'gdc_storm/image/cpc_badge.png' %}" alt="loadScreen par défaut" style="width:100%;height:auto;display:block;">
+                {% endif %}
+                <div style="color:#666;font-size:0.98em;margin-top:8px;font-style:italic;text-align:left;border-left:6px solid #888!important;padding-left:12px;">{{ mission.onLoadMission|linebreaksbr|default:'—' }}</div>
+            </div>
+            <h3 style="font-size:1.1em;font-weight:700;margin-bottom:10px;text-align:left;">Infos mission</h3>
+            <table class="mission-fields" style="width:100%;margin-bottom:32px;">
+                <tr><th>Type</th><td>{{ mission.get_type_display }}</td></tr>
+                <tr><th>Carte</th><td>{{ map_display }}</td></tr>
+                <tr><th>Version</th><td>{{ mission.version }}</td></tr>
+                <tr><th>Auteur(s)</th><td>{% if mission.authors %}{{ mission.authors }}{% elif mission.user %}<span style="color:#1976d2;font-weight:600;">{{ mission.user.username }}</span>{% else %}—{% endif %}</td></tr>
+                <tr><th>Propriétaire</th><td>{% if mission.user %}<a href="{% url 'user_profile' mission.user.id %}">{{ mission.user.username }}</a>{% else %}—{% endif %}</td></tr>
+                <tr><th>Joueurs</th><td>{% if mission.min_players %}Min {{ mission.min_players }} - {% endif %}Max {{ mission.max_players }}</td></tr>
+                <tr><th>Texte lobby</th><td>{{ mission.overviewText|linebreaksbr|default:'—' }}</td></tr>
+                <tr><th>Date de publication</th><td>{{ mission.publication_date|date:'d/m/Y H:i' }}</td></tr>
+                <tr><th>Statut</th><td>
+                    {% if mission.status == 'JOUABLE' %}
+                        <span style="vertical-align:middle;display:inline-block;margin-right:6px;color:#43a047;font-size:1.2em;">&#10003;</span>
+                    {% elif mission.status == 'NON_JOUABLE' %}
+                        <span style="vertical-align:middle;display:inline-block;margin-right:6px;color:#fbc02d;font-size:1.2em;">&#9888;</span>
+                    {% elif mission.status == 'INCONNU' %}
+                        <span style="vertical-align:middle;display:inline-block;margin-right:6px;color:#1976d2;font-size:1.2em;">&#9888;</span>
+                    {% elif mission.status == 'SUPPRIMEE' %}
+                        <span style="vertical-align:middle;display:inline-block;margin-right:6px;color:#e53935;font-size:1.2em;">&#10007;</span>
+                    {% endif %}
+                    {{ mission.get_status_display|default:'—' }}
+                    {% if mission.last_status_update %}<span style="color:#888;font-size:0.95em;margin-left:12px;">(modifié le {{ mission.last_status_update|date:'d/m/Y H:i' }})</span>{% endif %}
+                </td></tr>
+            </table>
+        </div>
+        <!-- Colonne droite (briefing + sessions) -->
+        <div style="flex:0 0 65.66666%;">
+            <div class="mission-tabs" style="margin-bottom:24px;">
+                <div style="display:flex;gap:0;">
+                    <button id="tab-briefing" class="tab-btn" style="flex:1 1 0;padding:10px 0;font-weight:700;font-size:1.08em;background:#1976d2;color:#fff;border:none;border-radius:8px 8px 0 0;cursor:pointer;">Briefing</button>
+                    <button id="tab-sessions" class="tab-btn" style="flex:1 1 0;padding:10px 0;font-weight:700;font-size:1.08em;background:#eee;color:#1976d2;border:none;border-radius:8px 8px 0 0;cursor:pointer;">Sessions</button>
+                </div>
+                <div id="tab-content-briefing" class="tab-content" style="background:#fff;border-radius:0 0 8px 8px;padding:24px 18px 18px 18px;">
+                    {% if mission.briefing %}
+                        <ul style="list-style-type:none;padding-left:0;margin:0;">
+                        {% for item in mission.briefing %}
+                            <li style="margin-bottom:28px;">
+                                <div style="display:inline-block;background:#1976d2;color:#fff;padding:6px 18px;font-weight:700;font-size:1.08em;border-radius:8px;box-shadow:1px 2px 8px #0002;transform:skew(-5deg);margin-bottom:8px;">{{ item.name }}</div><br>
+                                <span style="line-height: 1.5;">{{ item.content|safe }}</span>
+                            </li>
+                        {% empty %}
+                            <li>Aucun briefing structuré trouvé.</li>
+                        {% endfor %}
+                        </ul>
+                    {% else %}
+                        <div style="color:#888;font-size:1.1em;">Aucun briefing structuré trouvé.</div>
+                    {% endif %}
+                </div>
+                <div id="tab-content-sessions" class="tab-content" style="display:none;background:#fff;border-radius:0 0 8px 8px;padding:24px 18px 18px 18px;">
+                    {% if sessions_data %}
+                        <table style="width:100%;table-layout:auto;">
+                            <thead style="vertical-align:top;">
+                                <tr>
+                                    <th>Nom de la mission</th>
+                                    <th>Date</th>
+                                    <th>Durée</th>
+                                    <th>Verdict</th>
+                                    <th>Joueurs</th>
+                                    <th>Survivants</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for s in sessions_data %}
+                                <tr class="{% if s.verdict == 'SUCCES' %}session-row-succes{% elif s.verdict == 'ECHEC' %}session-row-echec{% elif s.verdict|upper == 'PVP' %}session-row-pvp{% elif s.verdict == 'TRAINING' %}session-row-training{% else %}session-row-indeterminee{% endif %}">
+                                    <td style="max-width:300px;overflow-x:auto;">
+                                        <a href="{% url 'session_detail' s.id %}" style="color:#1976d2;font-weight:600;text-decoration:underline;">{{ s.name }}</a>
+                                    </td>
+                                    <td>{{ s.start_time|date:'d/m/Y H:i' }}</td>
+                                    <td>{% if s.duration_min is not None %}{{ s.duration_min }} min{% else %}—{% endif %}</td>
+                                    <td>{{ s.verdict_display }}</td>
+                                    <td>{{ s.players_count }}</td>
+                                    <td>{{ s.vivant_count }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <div style="color:#888;font-size:1.1em;">Aucune session jouée pour cette mission.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+// Popup statut (uniquement si le bouton existe)
+var openStatusBtn = document.getElementById('open-status-popup');
+if (openStatusBtn) {
+    openStatusBtn.onclick = function() {
+        document.getElementById('status-popup').style.display = 'flex';
+    };
+}
+var cancelStatusBtn = document.getElementById('cancel-status-popup');
+if (cancelStatusBtn) {
+    cancelStatusBtn.onclick = function() {
+        document.getElementById('status-popup').style.display = 'none';
+    };
+}
+// Fermer la popup si clic en dehors du formulaire
+window.addEventListener('click', function(e) {
+    var popup = document.getElementById('status-popup');
+    var statusForm = document.getElementById('status-form');
+    if (popup && popup.style.display === 'flex' && statusForm && !statusForm.contains(e.target) && e.target.id !== 'open-status-popup') {
+        popup.style.display = 'none';
+    }
+});
+// Onglets Briefing/Sessions
+function setupTabs() {
+    var tabBriefing = document.getElementById('tab-briefing');
+    var tabSessions = document.getElementById('tab-sessions');
+    var contentBriefing = document.getElementById('tab-content-briefing');
+    var contentSessions = document.getElementById('tab-content-sessions');
+    if(tabBriefing && tabSessions && contentBriefing && contentSessions) {
+        tabBriefing.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            tabBriefing.style.background = '#1976d2';
+            tabBriefing.style.color = '#fff';
+            tabSessions.style.background = '#eee';
+            tabSessions.style.color = '#1976d2';
+            contentBriefing.style.display = '';
+            contentSessions.style.display = 'none';
+        });
+        tabSessions.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            tabSessions.style.background = '#1976d2';
+            tabSessions.style.color = '#fff';
+            tabBriefing.style.background = '#eee';
+            tabBriefing.style.color = '#1976d2';
+            contentBriefing.style.display = 'none';
+            contentSessions.style.display = '';
+        });
+    }
+}
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupTabs);
+} else {
+    setupTabs();
+}
+</script>
+{% endblock %}

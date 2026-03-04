@@ -1,0 +1,98 @@
+{% extends 'gdc_storm/base.html' %}
+{% block title %}Détail carte - {{ map.display_name|default:map.code_name }}{% endblock %}
+{% block content %}
+<div class="missions-container" style="max-width:1100px;margin:40px auto 0 auto;padding:0 32px 32px 32px;border-radius:18px;background:#fff;box-shadow:0 2px 16px #0002;">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div class="missions-title" style="font-size:2.1em;font-weight:700;margin-top:12px;text-align:left;">{{ map.display_name|default:map.code_name }}</div>
+    </div>
+    <table class="info-table" style="margin:24px 0 32px 0;width:100%;min-width:400px;">
+        <tr>
+            <th>Nom</th>
+            <th>Nom d'origine</th>
+            <th>Missions publiées</th>
+            <th>Sessions jouées</th>
+        </tr>
+        <tr>
+            <td>{{ map.display_name|default:'-' }}</td>
+            <td>{{ map.code_name }}</td>
+            <td>{{ missions_count }}</td>
+            <td>{{ sessions_count }}</td>
+        </tr>
+    </table>
+    <div class="user-tabs" style="margin-bottom:24px;">
+        <div style="display:flex;gap:0;">
+            <button id="tab-missions" class="tab-btn" style="flex:1 1 0;padding:10px 0;font-weight:700;font-size:1.08em;background:#1976d2;color:#fff;border:none;border-radius:8px 8px 0 0;cursor:pointer;">Missions publiées</button>
+            <button id="tab-sessions" class="tab-btn" style="flex:1 1 0;padding:10px 0;font-weight:700;font-size:1.08em;background:#eee;color:#1976d2;border:none;border-radius:8px 8px 0 0;cursor:pointer;">Sessions jouées</button>
+        </div>
+        <div id="tab-content-missions" class="tab-content" style="background:#fff;border-radius:0 0 8px 8px;padding:24px 18px 18px 18px;">
+            <h3 style="margin-bottom:18px;font-size:1.3em;font-weight:600;">Missions publiées</h3>
+            <table class="modern-table">
+                <thead>
+                    <tr><th>Nom</th><th>Type</th><th>Joueurs max</th><th>Version</th><th>Status</th></tr>
+                </thead>
+                <tbody>
+                {% for mission in missions %}
+                    <tr class="{% if mission.status == 'JOUABLE' %}mission-row-jouable{% elif mission.status == 'NON_JOUABLE' %}mission-row-non-jouable{% elif mission.status == 'INCONNU' %}mission-row-inconnu{% elif mission.status == 'SUPPRIMEE' %}mission-row-supprimee{% else %}mission-row-{{ mission.status|lower }}{% endif %}">
+                        <td><a href="{% url 'mission_detail' mission.id %}">{{ mission.name }}</a></td>
+                        <td>{{ mission.type }}</td>
+                        <td>{{ mission.max_players }}</td>
+                        <td>{{ mission.version }}</td>
+                        <td>{{ mission.get_status_display }}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="5">Aucune mission publiée sur cette carte.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div id="tab-content-sessions" class="tab-content" style="display:none;background:#fff;border-radius:0 0 8px 8px;padding:24px 18px 18px 18px;">
+            <h3 style="margin-bottom:18px;font-size:1.3em;font-weight:600;">Sessions jouées</h3>
+            <table class="modern-table">
+                <thead>
+                    <tr><th>Nom</th><th>Date</th><th>Durée</th><th>Joueurs</th><th>Survivants</th></th><th>Verdict</th></tr>
+                </thead>
+                <tbody>
+                {% for session in sessions_data %}
+                    <tr class="session-row-{{ session.verdict|lower }}">
+                        <td><a href="{% url 'session_detail' session.id %}">{{ session.name }}</a></td>
+                        <td>{{ session.start_time|date:'d/m/Y H:i' }}</td>
+                        <td>{% if session.duration_min is not None %}{{ session.duration_min }} min{% else %}—{% endif %}</td>
+                        <td>{{ session.verdict_display }}</td>
+                        <td>{{ session.players_count }}</td>
+                        <td>{{ session.vivant_count }}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="5">Aucune session jouée sur cette carte.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<script>
+const tabMissions = document.getElementById('tab-missions');
+const tabSessions = document.getElementById('tab-sessions');
+const contentMissions = document.getElementById('tab-content-missions');
+const contentSessions = document.getElementById('tab-content-sessions');
+function activateTab(tab) {
+    if(tab === 'missions') {
+        tabMissions.style.background = '#1976d2';
+        tabMissions.style.color = '#fff';
+        tabSessions.style.background = '#eee';
+        tabSessions.style.color = '#1976d2';
+        contentMissions.style.display = '';
+        contentSessions.style.display = 'none';
+    } else {
+        tabSessions.style.background = '#1976d2';
+        tabSessions.style.color = '#fff';
+        tabMissions.style.background = '#eee';
+        tabMissions.style.color = '#1976d2';
+        contentMissions.style.display = 'none';
+        contentSessions.style.display = '';
+    }
+}
+tabMissions.onclick = () => activateTab('missions');
+tabSessions.onclick = () => activateTab('sessions');
+activateTab('missions');
+</script>
+{% endblock %}
