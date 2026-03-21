@@ -492,7 +492,8 @@ def user_profile(request, user_id):
             dead += 1
         else:
             alive += 1
-    dead_alive_ratio = {"alive" : alive, "dead" : dead, "ratio" : round(alive/dead, 2)}
+    ratio = round(alive/dead, 2) if dead > 0 else "inf."
+    dead_alive_ratio = {"alive" : alive, "dead" : dead, "ratio" : ratio}
     
     context = {
         'user_profile': user_profile,
@@ -763,9 +764,21 @@ def player_detail(request, player_id):
     elif sort == 'verdict':
         sessions_data.sort(key=lambda x: (x['session'].verdict or '').lower(), reverse=reverse_order)
     status_by_session_id = {gsp.session_id: gsp.status for gsp in gamesession_players}
+
+    # Dead alive ratio
+    # Out off previous loop to avoid total alive + dead to be higher than total missions played by the player
+    alive, dead = 0, 0
+    for v in status_by_session_id.values():
+        if v == 'MORT':
+            dead += 1
+        else:
+            alive += 1
+    ratio = round(alive/dead, 2) if dead > 0 else "inf."
+    dead_alive_ratio = {"alive" : alive, "dead" : dead, "ratio" : ratio}
     return render(request, 'gdc_storm/player_detail.html', {
         'player': player,
         'sessions_played': sessions_played,
+        'dead_alive_ratio': dead_alive_ratio,
         'total_sessions_played': total_sessions_played,
         'sessions_data': sessions_data,
         'player_sessions_map_displays': all_map_displays,
