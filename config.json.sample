@@ -1,0 +1,10 @@
+{
+  "SECRET_KEY": "change-me",
+  "PLATFORM": "DEV",
+  "MISSIONS_PBO_STORAGE_PATH": "missions/pbos",
+  "WSGI": {
+    "PATH_SITE_PACKAGES": "C:/path/to/venv/Lib/site-packages",
+    "PATH_GDC_KRAKEN": "C:/Users/your-user/PycharmProjects/gdc-kraken",
+    "PATH_GDC_STORM": "C:/Users/your-user/PycharmProjects/gdc-storm"
+  }
+}
