@@ -36,7 +36,7 @@ if config_data["PLATFORM"] == "PROD":
 else:
     DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "grecedecanards.fr"]
+ALLOWED_HOSTS = ["localhost", "grecedecanards.fr", "127.0.0.1"]
 
 
 # Application definition
